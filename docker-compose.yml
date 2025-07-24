@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  oci-apply-job:
+    build: .
+    image: ghcr.io/${GITHUB_REPOSITORY:-local/oci-apply-job}:latest
+    volumes:
+      # Mount OCI config directory
+      - ~/.oci:/root/.oci:ro
+    environment:
+      # Optional: Override OCI config file location
+      # OCI_CONFIG_FILE: /root/.oci/config
+      # OCI_CONFIG_PROFILE: DEFAULT
+    restart: unless-stopped
