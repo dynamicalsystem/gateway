@@ -7,8 +7,7 @@ services:
     volumes:
       # Mount OCI config directory
       - ~/.oci:/root/.oci:ro
-    environment:
-      # Optional: Override OCI config file location
-      # OCI_CONFIG_FILE: /root/.oci/config
-      # OCI_CONFIG_PROFILE: DEFAULT
+    # environment:
+    #   OCI_CONFIG_FILE: /root/.oci/config
+    #   OCI_CONFIG_PROFILE: DEFAULT
     restart: unless-stopped

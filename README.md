@@ -25,7 +25,7 @@ curl -fsSL https://raw.githubusercontent.com/dynamicalsystem/gateway/main/deploy
 ```
 
 This will:
-- Download the docker-compose configuration
+- Download the docker-compose.yml configuration
 - Pull the latest Docker image
 - Start the service with your OCI credentials mounted
 - Run the job monitor in the background
@@ -64,7 +64,7 @@ This will:
 
 Or use Docker Compose:
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 ## Configuration
@@ -95,17 +95,17 @@ key_file=~/.oci/oci_api_key.pem
 
 View logs:
 ```bash
-docker-compose logs -f
+docker compose logs -f
 ```
 
 Stop the service:
 ```bash
-docker-compose down
+docker compose down
 ```
 
 Check status:
 ```bash
-docker-compose ps
+docker compose ps
 ```
 
 ## GitHub Actions
