@@ -17,7 +17,7 @@ echo "================================"
 
 # Check for required commands
 command -v docker >/dev/null 2>&1 || { echo -e "${RED}Error: docker is not installed${NC}" >&2; exit 1; }
-command -v docker-compose >/dev/null 2>&1 || { echo -e "${RED}Error: docker-compose is not installed${NC}" >&2; exit 1; }
+command -v docker compose >/dev/null 2>&1 || { echo -e "${RED}Error: docker compose is not installed${NC}" >&2; exit 1; }
 
 # Check for OCI config
 if [ ! -d "$HOME/.oci" ]; then
@@ -46,27 +46,27 @@ export GITHUB_REPOSITORY="${GITHUB_REPOSITORY:-dynamicalsystem/gateway}"
 
 # Pull latest image
 echo -e "${YELLOW}Pulling latest Docker image...${NC}"
-docker-compose pull
+docker compose pull
 
 # Stop existing container if running
-if docker-compose ps -q >/dev/null 2>&1; then
+if docker compose ps -q >/dev/null 2>&1; then
     echo -e "${YELLOW}Stopping existing container...${NC}"
-    docker-compose down
+    docker compose down
 fi
 
 # Start the service
 echo -e "${YELLOW}Starting OCI Gateway service...${NC}"
-docker-compose up -d
+docker compose up -d
 
 # Check if service is running
 sleep 2
-if docker-compose ps | grep -q "Up"; then
+if docker compose ps | grep -q "Up"; then
     echo -e "${GREEN}✓ OCI Gateway is running!${NC}"
     echo ""
-    echo "To view logs: docker-compose -f $DEPLOY_DIR/$COMPOSE_FILE logs -f"
-    echo "To stop: docker-compose -f $DEPLOY_DIR/$COMPOSE_FILE down"
+    echo "To view logs: docker compose -f $DEPLOY_DIR/$COMPOSE_FILE logs -f"
+    echo "To stop: docker compose -f $DEPLOY_DIR/$COMPOSE_FILE down"
 else
     echo -e "${RED}✗ Failed to start OCI Gateway${NC}"
-    echo "Check logs with: docker-compose -f $DEPLOY_DIR/$COMPOSE_FILE logs"
+    echo "Check logs with: docker compose -f $DEPLOY_DIR/$COMPOSE_FILE logs"
     exit 1
 fi
