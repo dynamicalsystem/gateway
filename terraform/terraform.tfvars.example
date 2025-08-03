@@ -1,0 +1,17 @@
+# Copy this file to terraform.tfvars and fill in your values
+
+# From your OCI config file (~/.oci/config)
+tenancy_ocid     = "ocid1.tenancy.oc1..aaaaaaaaa..."
+user_ocid        = "ocid1.user.oc1..aaaaaaaaa..."
+fingerprint      = "aa:bb:cc:dd:ee:ff:00:11:22:33:44:55:66:77:88:99"
+private_key_path = "~/.oci/oci_api_key.pem"
+region           = "uk-london-1"
+
+# Compartment where resources will be created (use tenancy OCID for root compartment)
+compartment_id = "ocid1.tenancy.oc1..aaaaaaaaa..."
+
+# Availability domain (run `oci iam availability-domain list` to get this)
+availability_domain = "Iocq:UK-LONDON-1-AD-1"
+
+# Your SSH public key for accessing the instance
+ssh_public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAB... user@host"

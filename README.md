@@ -1,38 +1,115 @@
 # OCI Gateway
 
-Automated Oracle Cloud Infrastructure (OCI) Resource Manager job executor that continuously monitors and retries failed apply jobs.
+Automated Oracle Cloud Infrastructure (OCI) instance deployment tool that continuously retries provisioning until successful. Now supports both Terraform (recommended) and OCI Resource Manager approaches.
 
 ## Features
 
-- Automatically creates and monitors OCI Resource Manager apply jobs
-- Retries failed jobs with detailed error logging
-- Extracts specific error messages from job logs
-- Runs continuously until successful completion
+- **Terraform Mode (Recommended)**: Full control over infrastructure with version-controlled configuration
+- **Resource Manager Mode**: Uses existing OCI stacks (legacy approach)
+- Automatic retry on capacity errors
+- Detailed error logging with proper log formatting
+- Docker containerized for easy deployment
+- Configurable infrastructure parameters
 
 ## Prerequisites
 
-- OCI CLI configuration (`~/.oci/config`)
-- Valid OCI API credentials
+- Valid OCI API credentials (tenancy OCID, user OCID, API key, etc.)
 - Docker and Docker Compose (for containerized deployment)
 - Python 3.13+ with `uv` (for local development)
+- Your OCI private key file
 
-## Quick Deploy with Docker
+## Quick Start
 
-Run this command to automatically deploy the service:
+1. **Set up your environment:**
+   ```bash
+   # Create config directory structure
+   mkdir -p ~/.config/dynamicalsystem/
+   
+   # Copy the example environment file to XDG location
+   cp .env.example ~/.config/dynamicalsystem/gateway.prod.env
+   
+   # Edit with your OCI credentials
+   nano ~/.config/dynamicalsystem/gateway.prod.env
+   ```
 
+2. **Place your OCI credentials:**
+   ```bash
+   # Create the directory structure for OCI API key
+   mkdir -p ~/.local/share/dynamicalsystem/gateway/oci/
+   
+   # Copy your OCI API private key
+   cp /path/to/your/oci_api_key.pem ~/.local/share/dynamicalsystem/gateway/oci/
+   chmod 600 ~/.local/share/dynamicalsystem/gateway/oci/oci_api_key.pem
+   
+   # Your SSH keys should already be in ~/.ssh/
+   # The app will read ~/.ssh/id_oci.pub automatically
+   # Make sure your SSH keys exist:
+   ls ~/.ssh/id_oci*
+   ```
+
+3. **Run with Docker Compose:**
+   ```bash
+   docker compose up
+   ```
+   
+   For different environments:
+   ```bash
+   TIN_ENVIRONMENT=dev docker compose up
+   # Uses: ~/.config/dynamicalsystem/gateway.dev.env
+   ```
+
+## Docker Deployment Options
+
+**Default (Rootless - Recommended):**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/dynamicalsystem/gateway/main/deploy.sh | bash
+# Runs as non-root user (UID/GID 1000 by default)
+docker compose up
+
+# Optional: Match your specific user IDs
+USER_ID=$(id -u) GROUP_ID=$(id -g) docker compose up
 ```
 
-This will:
-- Download the docker-compose.yml configuration
-- Pull the latest Docker image
-- Start the service with your OCI credentials mounted
-- Run the job monitor in the background
+**Rootful (Legacy):**
+```bash
+# For compatibility with systems requiring root containers
+docker compose -f docker-compose.rootful.yml up
+```
+
+**Key differences:**
+- **Default**: Non-root user, SELinux compatible (`:Z` flags), better security
+- **Rootful**: Root user, traditional Docker behavior, may have permission issues
 
 ## Manual Installation
 
-### Local Development
+### Using Terraform (Recommended)
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/dynamicalsystem/gateway.git
+   cd gateway
+   ```
+
+2. Set up environment:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your OCI credentials
+   ```
+
+3. Install dependencies:
+   ```bash
+   uv sync
+   ```
+
+4. Run the Terraform deployment:
+   ```bash
+   # Source environment variables
+   source .env
+   
+   # Run deployment
+   uv run terraform_deploy.py
+   ```
+
+### Using Resource Manager (Legacy)
 
 1. Clone the repository:
    ```bash
@@ -57,9 +134,9 @@ This will:
    docker build -t oci-gateway .
    ```
 
-2. Run with mounted OCI config:
+2. Run with environment variables:
    ```bash
-   docker run -v ~/.oci:/root/.oci:ro oci-gateway
+   docker run --env-file .env oci-gateway
    ```
 
 Or use Docker Compose:
@@ -69,27 +146,72 @@ docker compose up -d
 
 ## Configuration
 
-The application expects OCI configuration at `~/.oci/config` with the following structure:
+### Environment Variables
 
-```ini
-[DEFAULT]
-user=ocid1.user.oc1..aaaaaaaaa...
-fingerprint=aa:bb:cc:dd:ee:ff:00:11:22:33:44:55:66:77:88:99
-tenancy=ocid1.tenancy.oc1..aaaaaaaaa...
-region=uk-london-1
-key_file=~/.oci/oci_api_key.pem
-```
+The application uses environment variables for all configuration. See `.env.example` for the complete list.
+
+### File Storage Locations
+
+The application follows XDG Base Directory specification:
+
+- **Environment config**: `$XDG_CONFIG_HOME/$TIN_NAMESPACE/$TIN_SERVICE.$TIN_ENVIRONMENT.env`
+- **Private keys**: `$XDG_DATA_HOME/$TIN_NAMESPACE/$TIN_SERVICE/oci/`
+- **Terraform state**: `$XDG_STATE_HOME/$TIN_NAMESPACE/$TIN_SERVICE/terraform/`
+
+Defaults:
+- `XDG_CONFIG_HOME`: `~/.config`
+- `XDG_DATA_HOME`: `~/.local/share`
+- `XDG_STATE_HOME`: `~/.local/state`
+- `TIN_NAMESPACE`: `dynamicalsystem`
+- `TIN_SERVICE`: `gateway`
+- `TIN_ENVIRONMENT`: `prod`
+
+Example paths with defaults:
+- Config: `~/.config/dynamicalsystem/gateway.prod.env`
+- OCI API private key: `~/.local/share/dynamicalsystem/gateway/oci/oci_api_key.pem`
+- SSH public key: `~/.ssh/id_oci.pub` (standard SSH location)
+- Terraform state: `~/.local/state/dynamicalsystem/gateway/terraform/terraform.tfstate`
+
+### Security Best Practices
+
+1. **Never commit secrets**: The `.env` file and private keys should never be in version control
+2. **Use Docker secrets**: When running in production, use proper Docker secrets management
+3. **Protect state files**: Terraform state files contain sensitive data and should be protected
+4. **Minimal permissions**: Set file permissions to 600 for private keys
 
 ## How It Works
 
+### Terraform Mode (Recommended)
+1. Reads infrastructure definition from `terraform/main.tf`
+2. Attempts to provision resources using `terraform apply`
+3. On capacity errors:
+   - Logs the specific error
+   - Waits 60 seconds
+   - Retries the deployment
+4. On success:
+   - Displays connection information
+   - Exits successfully
+
+### Resource Manager Mode (Legacy)
 1. Creates an OCI Resource Manager apply job with auto-approval
 2. Monitors job status every 60 seconds
 3. On failure:
    - Displays the failure message
-   - Fetches and parses job logs for `[INFO] Error:` messages
+   - Fetches and parses job logs for error details
    - Creates a new job and continues monitoring
 4. On success or cancellation:
    - Displays final status and exits
+
+## Terraform Configuration
+
+The Terraform configuration in `terraform/main.tf` provisions:
+- Ubuntu 22.04 on ARM (VM.Standard.A1.Flex)
+- 1 OCPU and 6GB RAM (conservative free tier usage)
+- VCN with public subnet
+- Internet gateway and security rules
+- SSH access configuration
+
+To customize the instance, edit `terraform/main.tf` directly.
 
 ## Managing the Service
 

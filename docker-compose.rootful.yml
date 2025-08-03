@@ -1,12 +1,11 @@
 version: '3.8'
 
+# Rootful Docker Compose configuration for root-based containers
+# Use this if you need to run containers as root for compatibility reasons
+
 services:
   oci-gateway:
-    build:
-      context: .
-      args:
-        USER_ID: ${USER_ID:-1000}
-        GROUP_ID: ${GROUP_ID:-1000}
+    build: .
     image: ghcr.io/${GITHUB_REPOSITORY:-local/oci-gateway}:latest
     env_file:
       - ${XDG_CONFIG_HOME:-~/.config}/${TIN_NAMESPACE:-dynamicalsystem}/${TIN_SERVICE:-gateway}.${TIN_ENVIRONMENT:-prod}.env
@@ -31,13 +30,13 @@ services:
     secrets:
       - oci_private_key
     volumes:
-      # Mount XDG directories with proper user ownership
-      - ${XDG_DATA_HOME:-~/.local/share}/${TIN_NAMESPACE:-dynamicalsystem}/${TIN_SERVICE:-gateway}:/data/${TIN_NAMESPACE:-dynamicalsystem}/${TIN_SERVICE:-gateway}:Z
-      - ${XDG_CONFIG_HOME:-~/.config}/${TIN_NAMESPACE:-dynamicalsystem}/${TIN_SERVICE:-gateway}:/config/${TIN_NAMESPACE:-dynamicalsystem}/${TIN_SERVICE:-gateway}:Z
-      - ${XDG_STATE_HOME:-~/.local/state}/${TIN_NAMESPACE:-dynamicalsystem}/${TIN_SERVICE:-gateway}:/state/${TIN_NAMESPACE:-dynamicalsystem}/${TIN_SERVICE:-gateway}:Z
+      # Mount XDG directories (root-based)
+      - ${XDG_DATA_HOME:-~/.local/share}/${TIN_NAMESPACE:-dynamicalsystem}/${TIN_SERVICE:-gateway}:/data/${TIN_NAMESPACE:-dynamicalsystem}/${TIN_SERVICE:-gateway}
+      - ${XDG_CONFIG_HOME:-~/.config}/${TIN_NAMESPACE:-dynamicalsystem}/${TIN_SERVICE:-gateway}:/config/${TIN_NAMESPACE:-dynamicalsystem}/${TIN_SERVICE:-gateway}
+      - ${XDG_STATE_HOME:-~/.local/state}/${TIN_NAMESPACE:-dynamicalsystem}/${TIN_SERVICE:-gateway}:/state/${TIN_NAMESPACE:-dynamicalsystem}/${TIN_SERVICE:-gateway}
     command: ${USE_RESOURCE_MANAGER:+uv run main.py}
     restart: unless-stopped
-    user: ${USER_ID:-1000}:${GROUP_ID:-1000}
+    # Note: No user override - runs as root
 
 secrets:
   oci_private_key:

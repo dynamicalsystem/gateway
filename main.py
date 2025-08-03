@@ -2,6 +2,18 @@ def main():
     import oci
     from datetime import datetime
     import time
+    import logging
+    import sys
+
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.StreamHandler(sys.stdout)
+        ]
+    )
+    logger = logging.getLogger(__name__)
 
     # Create a default config using DEFAULT profile in default location
     config = oci.config.from_file()
@@ -14,9 +26,9 @@ def main():
         attempt += 1
         
         # Step 1: Create the job
-        print(f"\n{'='*60}")
-        print(f"Attempt #{attempt} - Creating APPLY job at {datetime.now()}")
-        print(f"{'='*60}")
+        logger.info(f"{'='*60}")
+        logger.info(f"Attempt #{attempt} - Creating APPLY job at {datetime.now()}")
+        logger.info(f"{'='*60}")
         
         create_job_response = resource_manager_client.create_job(
             create_job_details=oci.resource_manager.models.CreateJobDetails(
@@ -30,22 +42,22 @@ def main():
         )
         
         job_id = create_job_response.data.id
-        print(f"Job created with ID: {job_id}")
-        print(f"Initial status: {create_job_response.data.lifecycle_state}")
+        logger.info(f"Job created with ID: {job_id}")
+        logger.info(f"Initial status: {create_job_response.data.lifecycle_state}")
         
         # Step 2: Wait for job to complete (check every minute)
         terminal_states = ["SUCCEEDED", "FAILED", "CANCELED"]
         
         while True:
             # Wait 60 seconds before checking
-            print("\nWaiting 60 seconds before checking status...")
+            logger.info("Waiting 60 seconds before checking status...")
             time.sleep(60)
             
             # Get current job status
             get_job_response = resource_manager_client.get_job(job_id=job_id)
             current_status = get_job_response.data.lifecycle_state
             
-            print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Job status: {current_status}")
+            logger.info(f"Job status: {current_status}")
             
             # Check if job has reached a terminal state
             if current_status in terminal_states:
@@ -55,11 +67,11 @@ def main():
                     if get_job_response.data.failure_details:
                         failure_message = get_job_response.data.failure_details.message
                     
-                    print(f"\n❌ Job FAILED: {failure_message}")
+                    logger.error(f"❌ Job FAILED: {failure_message}")
                     
                     # Get job logs and extract [INFO] Error: messages
                     try:
-                        print("\nFetching job logs for error details...")
+                        logger.info("Fetching job logs for error details...")
                         logs_response = resource_manager_client.get_job_logs_content(job_id=job_id)
                         
                         # Check if data is bytes or string
@@ -73,24 +85,24 @@ def main():
                                      if '[INFO] Error:' in line]
                         
                         if error_lines:
-                            print("\nError details from logs:")
+                            logger.error("Error details from logs:")
                             for error_line in error_lines:
-                                print(f"  {error_line}")
+                                logger.error(f"  {error_line}")
                         else:
-                            print("No [INFO] Error: messages found in logs")
+                            logger.warning("No [INFO] Error: messages found in logs")
                     except Exception as e:
-                        print(f"Failed to retrieve job logs: {e}")
+                        logger.exception(f"Failed to retrieve job logs: {e}")
                     
                     break  # Exit inner loop, continue outer loop
                 
                 elif current_status == "SUCCEEDED":
-                    print(f"\n✅ Job SUCCEEDED! Exiting...")
-                    print(get_job_response.data)
+                    logger.info(f"✅ Job SUCCEEDED! Exiting...")
+                    logger.info(f"Job details: {get_job_response.data}")
                     return  # Exit the entire function
                 
                 elif current_status == "CANCELED":
-                    print(f"\n⚠️  Job CANCELED! Exiting...")
-                    print(get_job_response.data)
+                    logger.warning(f"⚠️  Job CANCELED! Exiting...")
+                    logger.info(f"Job details: {get_job_response.data}")
                     return  # Exit the entire function
 
 
