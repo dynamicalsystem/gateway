@@ -14,10 +14,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install Terraform
 ENV TERRAFORM_VERSION=1.9.5
-RUN wget -q https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip \
-    && unzip terraform_${TERRAFORM_VERSION}_linux_amd64.zip \
+RUN ARCH=$(uname -m) \
+    && if [ "$ARCH" = "x86_64" ]; then TERRAFORM_ARCH="amd64"; elif [ "$ARCH" = "aarch64" ]; then TERRAFORM_ARCH="arm64"; else TERRAFORM_ARCH="$ARCH"; fi \
+    && wget -q https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_${TERRAFORM_ARCH}.zip \
+    && unzip terraform_${TERRAFORM_VERSION}_linux_${TERRAFORM_ARCH}.zip \
     && mv terraform /usr/local/bin/ \
-    && rm terraform_${TERRAFORM_VERSION}_linux_amd64.zip \
+    && rm terraform_${TERRAFORM_VERSION}_linux_${TERRAFORM_ARCH}.zip \
     && terraform version
 
 # Create a non-root user for rootless Docker compatibility
