@@ -9,7 +9,7 @@ services:
         GROUP_ID: ${GROUP_ID:-1000}
     image: ghcr.io/${GITHUB_REPOSITORY:-local/oci-gateway}:latest
     env_file:
-      - ${XDG_CONFIG_HOME:-~/.config}/${TIN_NAMESPACE:-dynamicalsystem}/${TIN_SERVICE:-gateway}.${TIN_ENVIRONMENT:-prod}.env
+      - ${ENV_FILE:-gateway.env}
     environment:
       # OCI configuration from secrets
       TF_VAR_tenancy_ocid: ${OCI_TENANCY_OCID}
@@ -18,27 +18,26 @@ services:
       TF_VAR_region: ${OCI_REGION}
       TF_VAR_compartment_id: ${OCI_COMPARTMENT_ID}
       TF_VAR_availability_domain: ${OCI_AVAILABILITY_DOMAIN}
-      # SSH public key is read from file by terraform_deploy.py
-      OCI_SSH_PUBLIC_KEY_PATH: ${OCI_SSH_PUBLIC_KEY_PATH}
-      # XDG paths
+      # XDG paths inside container
       XDG_DATA_HOME: /data
       XDG_CONFIG_HOME: /config
       XDG_STATE_HOME: /state
       TIN_NAMESPACE: ${TIN_NAMESPACE:-dynamicalsystem}
-      TIN_SERVICE: ${TIN_SERVICE:-gateway}
+      TIN_SERVICE_NAME: ${TIN_SERVICE_NAME:-gateway}
       # Legacy mode flag
       USE_RESOURCE_MANAGER: ${USE_RESOURCE_MANAGER:-false}
-    secrets:
-      - oci_private_key
+      # Secret paths inside container
+      OCI_PRIVATE_KEY_PATH: /secrets/oci_api_key.pem
+      OCI_SSH_PUBLIC_KEY_PATH: /secrets/id_oci.pub
     volumes:
-      # Mount XDG directories with proper user ownership
-      - ${XDG_DATA_HOME:-~/.local/share}/${TIN_NAMESPACE:-dynamicalsystem}/${TIN_SERVICE:-gateway}:/data/${TIN_NAMESPACE:-dynamicalsystem}/${TIN_SERVICE:-gateway}:Z
-      - ${XDG_CONFIG_HOME:-~/.config}/${TIN_NAMESPACE:-dynamicalsystem}/${TIN_SERVICE:-gateway}:/config/${TIN_NAMESPACE:-dynamicalsystem}/${TIN_SERVICE:-gateway}:Z
-      - ${XDG_STATE_HOME:-~/.local/state}/${TIN_NAMESPACE:-dynamicalsystem}/${TIN_SERVICE:-gateway}:/state/${TIN_NAMESPACE:-dynamicalsystem}/${TIN_SERVICE:-gateway}:Z
+      # Mount XDG directories - paths come from .env file, no defaults
+      - ${XDG_DATA_HOME}/${TIN_NAMESPACE}/${TIN_SERVICE_NAME}:/data:Z
+      - ${XDG_CONFIG_HOME}/${TIN_NAMESPACE}/${TIN_SERVICE_NAME}:/config:Z
+      - ${XDG_STATE_HOME}/${TIN_NAMESPACE}/${TIN_SERVICE_NAME}:/state:Z
+      
+      # Mount secrets as read-only
+      - ${XDG_DATA_HOME}/${TIN_NAMESPACE}/${TIN_SERVICE_NAME}/oci/oci_api_key.pem:/secrets/oci_api_key.pem:ro
+      - ${XDG_CONFIG_HOME}/${TIN_NAMESPACE}/${TIN_SERVICE_NAME}/ssh/id_oci.pub:/secrets/id_oci.pub:ro
     command: ${USE_RESOURCE_MANAGER:+uv run main.py}
     restart: unless-stopped
     user: ${USER_ID:-1000}:${GROUP_ID:-1000}
-
-secrets:
-  oci_private_key:
-    file: ${OCI_PRIVATE_KEY_PATH:-${XDG_DATA_HOME:-~/.local/share}/${TIN_NAMESPACE:-dynamicalsystem}/${TIN_SERVICE:-gateway}/oci/oci_api_key.pem}

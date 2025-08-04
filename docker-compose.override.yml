@@ -1,0 +1,33 @@
+# Tinsnip Integration Override
+# This file applies tinsnip-specific requirements to the base docker-compose.yml
+# Used when deploying via tinsnip infrastructure
+
+services:
+  oci-gateway:
+    # Container naming convention
+    container_name: ${TIN_SERVICE_NAME:-gateway}-${TIN_SERVICE_ENVIRONMENT:-prod}
+    
+    # Use tinsnip service UID
+    user: "${TIN_SERVICE_UID}:${TIN_SERVICE_UID}"
+    
+    # Port allocation using tinsnip convention
+    ports:
+      - "${PRIMARY_PORT}:8080"
+    
+    # Add tinsnip service metadata
+    environment:
+      TIN_SERVICE_NAME: ${TIN_SERVICE_NAME:-gateway}
+      TIN_SERVICE_ENVIRONMENT: ${TIN_SERVICE_ENVIRONMENT:-prod} 
+      TIN_SERVICE_UID: ${TIN_SERVICE_UID}
+    
+    # Connect to tinsnip network
+    networks:
+      - tinsnip_network
+
+    # Override image naming for tinsnip local builds
+    image: ${TIN_NAMESPACE:-dynamicalsystem}.${TIN_SERVICE_NAME:-gateway}:latest
+
+# Use external tinsnip network
+networks:
+  tinsnip_network:
+    external: true

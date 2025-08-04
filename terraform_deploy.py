@@ -59,7 +59,7 @@ class TerraformDeployer:
         # Set up state file path in XDG hierarchy
         xdg_state_home = os.environ.get('XDG_STATE_HOME', '/state')
         tin_namespace = os.environ.get('TIN_NAMESPACE', 'dynamicalsystem')
-        tin_service = os.environ.get('TIN_SERVICE', 'gateway')
+        tin_service = os.environ.get('TIN_SERVICE_NAME', 'gateway')
         
         state_dir = Path(xdg_state_home) / tin_namespace / tin_service / 'terraform'
         state_dir.mkdir(parents=True, exist_ok=True)
