@@ -1,17 +1,17 @@
 version: '3.8'
 
 services:
-  oci-gateway:
+  gateway:
     build:
       context: .
       args:
         USER_ID: ${USER_ID:-1000}
         GROUP_ID: ${GROUP_ID:-1000}
-    image: ghcr.io/${GITHUB_REPOSITORY:-local/oci-gateway}:latest
+    image: ghcr.io/${GITHUB_REPOSITORY:-dynamicalsystem/gateway}:${IMAGE_TAG:-latest}
     env_file:
-      - ${ENV_FILE:-gateway.env}
+      - ${XDG_CONFIG_HOME:-~/.config}/dynamicalsystem/gateway/.env
     environment:
-      # OCI configuration from secrets
+      # OCI configuration from env file
       TF_VAR_tenancy_ocid: ${OCI_TENANCY_OCID}
       TF_VAR_user_ocid: ${OCI_USER_OCID}
       TF_VAR_fingerprint: ${OCI_FINGERPRINT}
@@ -30,14 +30,14 @@ services:
       OCI_PRIVATE_API_KEY: /secrets/oci_api_key.pem
       OCI_PUBLIC_SSH_KEY: /secrets/id_oci.pub
     volumes:
-      # Mount XDG directories - paths come from .env file, no defaults
-      - ${XDG_DATA_HOME}/${TIN_NAMESPACE}/${TIN_SERVICE_NAME}:/data:Z
-      - ${XDG_CONFIG_HOME}/${TIN_NAMESPACE}/${TIN_SERVICE_NAME}:/config:Z
-      - ${XDG_STATE_HOME}/${TIN_NAMESPACE}/${TIN_SERVICE_NAME}:/state:Z
+      # Mount XDG directories with defaults for standalone deployment
+      - ${XDG_DATA_HOME:-~/.local/share}/dynamicalsystem/gateway:/data:Z
+      - ${XDG_CONFIG_HOME:-~/.config}/dynamicalsystem/gateway:/config:Z
+      - ${XDG_STATE_HOME:-~/.local/state}/dynamicalsystem/gateway:/state:Z
       
       # Mount secrets as read-only
-      - ${XDG_DATA_HOME}/${TIN_NAMESPACE}/${TIN_SERVICE_NAME}/oci/oci_api_key.pem:/secrets/oci_api_key.pem:ro
-      - ${XDG_CONFIG_HOME}/${TIN_NAMESPACE}/${TIN_SERVICE_NAME}/ssh/id_oci.pub:/secrets/id_oci.pub:ro
+      - ${XDG_DATA_HOME:-~/.local/share}/dynamicalsystem/gateway/oci/oci_api_key.pem:/secrets/oci_api_key.pem:ro
+      - ${XDG_CONFIG_HOME:-~/.config}/dynamicalsystem/gateway/ssh/id_oci.pub:/secrets/id_oci.pub:ro
     command: ${USE_RESOURCE_MANAGER:+uv run main.py}
     restart: unless-stopped
     user: ${USER_ID:-1000}:${GROUP_ID:-1000}

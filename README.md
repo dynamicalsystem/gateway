@@ -73,23 +73,20 @@ Gateway is a tinsnip-compliant service. When deploying through tinsnip infrastru
    ./machine/setup.sh gateway prod DS412plus
    ```
 
-3. **Deploy as service user:**
+3. **Deploy the service:**
    ```bash
    # Switch to service user
    sudo -u gateway-prod -i
    
-   # Copy service files
-   cp -r ~/.local/opt/dynamicalsystem.service/gateway /mnt/docker/service/
-   cd /mnt/docker/service/gateway
-   
-   # The .env file is automatically generated with:
-   # XDG_DATA_HOME=/mnt/tinsnip/data
-   # XDG_CONFIG_HOME=/mnt/tinsnip/config
-   # XDG_STATE_HOME=/mnt/tinsnip/state
-   
-   # Deploy
-   docker compose up -d
+   # Deploy using the smart deployment script
+   curl -fsSL https://raw.githubusercontent.com/dynamicalsystem/gateway/main/deploy.sh | bash
    ```
+   
+   The deploy script will:
+   - Auto-detect tinsnip environment
+   - Use service directory at `/mnt/gateway-prod/service/gateway/`
+   - Configure environment file at `/mnt/gateway-prod/config/dynamicalsystem/gateway/.env`
+   - Deploy using both `docker-compose.yml` and `docker-compose.override.yml`
 
 ## Docker Deployment Options
 
