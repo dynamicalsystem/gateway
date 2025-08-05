@@ -39,6 +39,9 @@ RUN pip install uv && \
 COPY main.py terraform_deploy.py ./
 COPY terraform/ ./terraform/
 
+# Make scripts executable
+RUN chmod +x terraform_deploy.py main.py
+
 # Create directories with proper ownership
 RUN mkdir -p /data /config /state && \
     chown -R appuser:appuser /app /data /config /state
@@ -46,5 +49,5 @@ RUN mkdir -p /data /config /state && \
 # Switch to non-root user
 USER appuser
 
-# Default to terraform deployment script
-CMD ["uv", "run", "terraform_deploy.py"]
+# Default to terraform deployment script - run with uv but no cache
+CMD ["uv", "run", "--no-cache", "terraform_deploy.py"]
