@@ -27,8 +27,8 @@ services:
       # Legacy mode flag
       USE_RESOURCE_MANAGER: ${USE_RESOURCE_MANAGER:-false}
       # Secret paths inside container
-      OCI_PRIVATE_KEY_PATH: /secrets/oci_api_key.pem
-      OCI_SSH_PUBLIC_KEY_PATH: /secrets/id_oci.pub
+      OCI_PRIVATE_API_KEY: /secrets/oci_api_key.pem
+      OCI_PUBLIC_SSH_KEY: /secrets/id_oci.pub
     volumes:
       # Mount XDG directories - paths come from .env file, no defaults
       - ${XDG_DATA_HOME}/${TIN_NAMESPACE}/${TIN_SERVICE_NAME}:/data:Z

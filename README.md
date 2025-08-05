@@ -52,15 +52,28 @@ Automated Oracle Cloud Infrastructure (OCI) instance deployment tool that contin
 
 ### Tinsnip Deployment
 
-When deploying through tinsnip infrastructure:
+Gateway is a tinsnip-compliant service. When deploying through tinsnip infrastructure:
 
-1. **Prepare the service:**
+**Prerequisites:** Tinsnip must be installed and configured on the target machine. See the [tinsnip repository](https://tangled.sh/dynamicalsystem.com/tinsnip) for setup instructions.
+
+1. **Setup tinsnip infrastructure (if not done already):**
    ```bash
-   # Tinsnip setup creates the service user and mounts
+   # First-time tinsnip setup (creates tinsnip user, LLDAP, etc.)
+   cd ~/.local/opt/dynamicalsystem.tinsnip
+   ./setup.sh
+   ```
+
+2. **Create gateway's tinsnip machine:**
+   ```bash
+   # Create gateway's tinsnip machine environment  
+   cd ~/.local/opt/dynamicalsystem.tinsnip
+   ./machine/setup.sh <service> <environment> <nas-server>
+   
+   # Example for production gateway with Synology NAS:
    ./machine/setup.sh gateway prod DS412plus
    ```
 
-2. **Deploy as service user:**
+3. **Deploy as service user:**
    ```bash
    # Switch to service user
    sudo -u gateway-prod -i

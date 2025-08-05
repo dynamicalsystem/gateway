@@ -43,7 +43,7 @@ class TerraformDeployer:
             logger.info("Using OCI private key from Docker secret")
         
         # Handle SSH public key from file
-        ssh_key_path = os.environ.get('OCI_SSH_PUBLIC_KEY_PATH')
+        ssh_key_path = os.environ.get('OCI_PUBLIC_SSH_KEY')
         if not ssh_key_path:
             # Use default path - standard SSH location
             ssh_key_path = os.path.expanduser("~/.ssh/id_oci.pub")
