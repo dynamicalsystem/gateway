@@ -43,11 +43,14 @@ COPY terraform/ ./terraform/
 RUN chmod +x terraform_deploy.py main.py
 
 # Create directories with proper ownership
-RUN mkdir -p /data /config /state && \
+RUN mkdir -p /data /config /state /app/.terraform && \
     chown -R appuser:appuser /app /data /config /state
 
 # Switch to non-root user
 USER appuser
+
+# Set working directory permissions for the user
+WORKDIR /app
 
 # Default to terraform deployment script - run with uv but no cache
 CMD ["uv", "run", "--no-cache", "terraform_deploy.py"]

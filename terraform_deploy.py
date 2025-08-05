@@ -81,6 +81,20 @@ class TerraformDeployer:
     def init_terraform(self):
         """Initialize Terraform"""
         logger.info("Initializing Terraform...")
+        
+        # Set Terraform plugin cache to a writable location
+        plugin_cache_dir = Path("/tmp/.terraform.d/plugin-cache")
+        plugin_cache_dir.mkdir(parents=True, exist_ok=True)
+        os.environ['TF_PLUGIN_CACHE_DIR'] = str(plugin_cache_dir)
+        
+        # Copy terraform files to a writable temp directory
+        import shutil
+        temp_tf_dir = Path("/tmp/terraform-work")
+        if temp_tf_dir.exists():
+            shutil.rmtree(temp_tf_dir)
+        shutil.copytree(self.terraform_dir, temp_tf_dir)
+        self.terraform_dir = temp_tf_dir
+        
         # Initialize with backend config for state file location
         cmd = f"terraform init -backend-config='path={self.state_file_path}'"
         result = self.run_command(cmd)
