@@ -198,6 +198,24 @@ def main():
         logger.error("Please ensure you're running this from the project root")
         sys.exit(1)
     
+    # Handle OCI private key path
+    oci_key_path = os.environ.get('OCI_PRIVATE_API_KEY', '/secrets/oci_api_key.pem')
+    if Path(oci_key_path).exists():
+        os.environ['TF_VAR_private_key_path'] = oci_key_path
+        logger.info(f"Using OCI private key from: {oci_key_path}")
+    
+    # Load SSH public key from file if available (before checking env vars)
+    ssh_key_path = os.environ.get('OCI_PUBLIC_SSH_KEY', '/secrets/id_oci.pub')
+    if not ssh_key_path:
+        # Use default path - standard SSH location
+        ssh_key_path = os.path.expanduser("~/.ssh/id_oci.pub")
+    
+    if Path(ssh_key_path).exists():
+        with open(ssh_key_path, 'r') as f:
+            ssh_public_key = f.read().strip()
+        os.environ['TF_VAR_ssh_public_key'] = ssh_public_key
+        logger.info(f"Using SSH public key from: {ssh_key_path}")
+    
     # Check for environment variables or tfvars file
     required_env_vars = [
         "TF_VAR_tenancy_ocid",
