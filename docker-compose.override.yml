@@ -16,11 +16,5 @@ services:
       TIN_SERVICE_ENVIRONMENT: ${TIN_SERVICE_ENVIRONMENT:-prod} 
       TIN_SERVICE_UID: ${TIN_SERVICE_UID}
     
-    # Connect to tinsnip network
-    networks:
-      - tinsnip_network
-
-# Use external tinsnip network
-networks:
-  tinsnip_network:
-    external: true
+    # Gateway doesn't need tinsnip_network - it provisions external OCI instances
+    # Remove network configuration to use default bridge network
