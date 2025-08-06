@@ -17,15 +17,18 @@ variable "region" {
 }
 
 variable "compartment_ocid" {
+  default = ""
 }
 
 variable "ssh_public_key" {
 }
 
 variable "ssh_private_key" {
+  default = ""
 }
 
 variable "kms_key_ocid" {
+  default = ""
 }
 
 provider "oci" {
@@ -69,6 +72,7 @@ variable "instance_shape_config_memory_in_gbs" {
 }
 
 variable "cluster_placement_group_ocid" {
+  default = ""
 }
 
 variable "instance_image_ocid" {
