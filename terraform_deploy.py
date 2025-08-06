@@ -120,6 +120,22 @@ class TerraformDeployer:
         logger.info("Running terraform plan to check for issues...")
         os.environ['TF_LOG'] = 'DEBUG'
         os.environ['TF_LOG_PATH'] = '/tmp/terraform-plan-debug.log'
+        
+        # First run plan with detailed output
+        plan_detail = self.run_command("terraform plan -detailed-exitcode")
+        logger.info("=== Terraform Plan Output ===")
+        logger.info(plan_detail.stdout)
+        
+        # Check specifically for the instance resource
+        plan_json = self.run_command("terraform plan -json")
+        for line in plan_json.stdout.split('\n'):
+            try:
+                data = json.loads(line)
+                if data.get('@level') == 'info' and 'oci_core_instance' in data.get('@message', ''):
+                    logger.info(f"Instance plan: {data}")
+            except:
+                pass
+        
         plan_result = self.run_command("terraform plan -out=/tmp/tfplan 2>&1")
         if plan_result.returncode != 0:
             logger.error(f"Terraform plan failed: {plan_result.stdout}")
@@ -243,11 +259,19 @@ class TerraformDeployer:
                 # Output debug log if it exists
                 debug_log_path = '/tmp/terraform-debug.log'
                 if Path(debug_log_path).exists():
-                    logger.error("\n=== Terraform Debug Log (last 100 lines) ===")
+                    logger.error("\n=== Terraform Debug Log (request details) ===")
                     with open(debug_log_path, 'r') as f:
                         lines = f.readlines()
-                        for line in lines[-100:]:
-                            if 'Request Body' in line or 'request body' in line.lower():
+                        capture_next = 0
+                        for i, line in enumerate(lines):
+                            # Look for request body or instance creation
+                            if 'LaunchInstance' in line or 'Request Body' in line or 'request body' in line.lower():
+                                capture_next = 20  # Capture next 20 lines after finding request
+                                logger.error(f"DEBUG: {line.strip()}")
+                            elif capture_next > 0:
+                                logger.error(f"DEBUG: {line.strip()}")
+                                capture_next -= 1
+                            elif 'shape_config' in line.lower() or 'metadata' in line.lower():
                                 logger.error(f"DEBUG: {line.strip()}")
                 
                 if self.check_capacity_error(errors, stderr):
