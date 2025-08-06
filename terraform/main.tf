@@ -174,16 +174,16 @@ resource "oci_core_instance" "free_instance" {
   }
 
   source_details {
-    source_type             = "image"
-    source_id               = data.oci_core_images.ubuntu_images.images[0].id
-    boot_volume_size_in_gbs = 50
-    boot_volume_vpus_per_gb = 0
+    source_type = "image"
+    source_id   = data.oci_core_images.ubuntu_images.images[0].id
   }
 
   create_vnic_details {
-    subnet_id        = oci_core_subnet.main_subnet.id
-    assign_public_ip = true
-    display_name     = "primary-vnic"
+    subnet_id                 = oci_core_subnet.main_subnet.id
+    display_name              = "primary-vnic"
+    assign_public_ip          = true
+    assign_private_dns_record = true
+    hostname_label            = "gateway"
   }
 
   metadata = {
