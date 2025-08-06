@@ -115,9 +115,30 @@ class TerraformDeployer:
             logger.error(f"Terraform configuration is invalid: {result.stderr}")
             sys.exit(1)
         logger.info("Terraform configuration is valid")
+        
+        # Also run terraform plan to catch more issues
+        logger.info("Running terraform plan to check for issues...")
+        os.environ['TF_LOG'] = 'DEBUG'
+        os.environ['TF_LOG_PATH'] = '/tmp/terraform-plan-debug.log'
+        plan_result = self.run_command("terraform plan -out=/tmp/tfplan 2>&1")
+        if plan_result.returncode != 0:
+            logger.error(f"Terraform plan failed: {plan_result.stdout}")
+            logger.error(f"Stderr: {plan_result.stderr}")
+            # Check debug log for request body
+            if Path('/tmp/terraform-plan-debug.log').exists():
+                with open('/tmp/terraform-plan-debug.log', 'r') as f:
+                    for line in f:
+                        if 'request' in line.lower() and 'body' in line.lower():
+                            logger.error(f"DEBUG: {line.strip()}")
+            sys.exit(1)
     
     def apply_terraform(self):
         """Apply Terraform configuration"""
+        # Set debug environment variables for OCI provider
+        os.environ['TF_LOG'] = 'DEBUG'
+        os.environ['TF_LOG_PATH'] = '/tmp/terraform-debug.log'
+        os.environ['OCI_GO_SDK_DEBUG'] = 'v'  # Verbose OCI SDK debugging
+        
         cmd = "terraform apply -auto-approve -json"
         result = self.run_command(cmd)
         
@@ -218,6 +239,16 @@ class TerraformDeployer:
                     logger.error("Error details:")
                     for error in errors:
                         logger.error(f"  - {error}")
+                
+                # Output debug log if it exists
+                debug_log_path = '/tmp/terraform-debug.log'
+                if Path(debug_log_path).exists():
+                    logger.error("\n=== Terraform Debug Log (last 100 lines) ===")
+                    with open(debug_log_path, 'r') as f:
+                        lines = f.readlines()
+                        for line in lines[-100:]:
+                            if 'Request Body' in line or 'request body' in line.lower():
+                                logger.error(f"DEBUG: {line.strip()}")
                 
                 if self.check_capacity_error(errors, stderr):
                     logger.info("🔄 Capacity error detected. Will retry in 60 seconds...")

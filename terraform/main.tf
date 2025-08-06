@@ -180,14 +180,19 @@ resource "oci_core_instance" "free_instance" {
 
   create_vnic_details {
     subnet_id        = oci_core_subnet.main_subnet.id
-    assign_public_ip = true
+    assign_public_ip = "true"
     display_name     = "primary-vnic"
   }
 
   metadata = {
     ssh_authorized_keys = var.ssh_public_key
-    "user_data" = "#!/bin/bash\napt-get update\napt-get upgrade -y\n# Add any additional setup commands here\n# For example:\n# apt-get install -y docker.io docker-compose\n# usermod -aG docker ubuntu\n"
   }
+  
+  depends_on = [
+    oci_core_subnet.main_subnet,
+    oci_core_internet_gateway.main_igw,
+    oci_core_route_table.main_route_table
+  ]
 }
 
 # Outputs
