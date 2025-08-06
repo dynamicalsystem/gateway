@@ -87,14 +87,18 @@ class TerraformDeployer:
         plugin_cache_dir.mkdir(parents=True, exist_ok=True)
         os.environ['TF_PLUGIN_CACHE_DIR'] = str(plugin_cache_dir)
         
-        # Copy terraform files to a writable temp directory
+        # Copy terraform files to a writable temp directory (only if not exists)
         import shutil
         temp_tf_dir = Path("/tmp/terraform-work")
-        if temp_tf_dir.exists():
-            shutil.rmtree(temp_tf_dir)
-        shutil.copytree(self.terraform_dir, temp_tf_dir)
+        if not temp_tf_dir.exists():
+            shutil.copytree(self.terraform_dir, temp_tf_dir)
         self.terraform_dir = temp_tf_dir
         
+        # Check if already initialized
+        if (self.terraform_dir / ".terraform").exists():
+            logger.info("Terraform already initialized, skipping init")
+            return
+            
         # Initialize with backend config for state file location
         cmd = f"terraform init -backend-config='path={self.state_file_path}'"
         result = self.run_command(cmd)
