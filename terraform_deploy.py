@@ -132,6 +132,18 @@ class TerraformDeployer:
         
         return result.returncode, errors, result.stderr
     
+    def cleanup_failed_deployment(self):
+        """Clean up failed deployment to avoid resource accumulation"""
+        try:
+            logger.info("Running terraform destroy to clean up failed resources...")
+            result = self.run_command("terraform destroy -auto-approve -target=oci_core_instance.free_instance")
+            if result.returncode == 0:
+                logger.info("Partial cleanup successful")
+            else:
+                logger.warning("Cleanup may have failed, continuing anyway")
+        except Exception as e:
+            logger.warning(f"Error during cleanup: {e}")
+    
     def check_capacity_error(self, errors, stderr):
         """Check if errors indicate capacity issues"""
         capacity_indicators = [
@@ -139,13 +151,26 @@ class TerraformDeployer:
             "OutOfHostCapacity", 
             "insufficient capacity",
             "no capacity",
+            "CannotAttachVolume"
+        ]
+        
+        # VCN limit errors are NOT capacity errors - they need manual intervention
+        non_capacity_indicators = [
+            "vcn-count",
             "limit exceeded",
             "quota exceeded",
-            "CannotAttachVolume"
+            "LimitExceeded"
         ]
         
         all_error_text = " ".join(errors) + " " + stderr
         
+        # First check if it's a non-capacity limit error
+        for indicator in non_capacity_indicators:
+            if indicator.lower() in all_error_text.lower():
+                logger.warning("Service limit error detected - this requires manual intervention or cleanup")
+                return False
+        
+        # Then check for capacity errors
         for indicator in capacity_indicators:
             if indicator.lower() in all_error_text.lower():
                 return True
@@ -193,6 +218,10 @@ class TerraformDeployer:
                 if self.check_capacity_error(errors, stderr):
                     logger.info("🔄 Capacity error detected. Will retry in 60 seconds...")
                     logger.info("   (Press Ctrl+C to stop)")
+                    
+                    # Try to clean up any partial resources before retrying
+                    logger.info("   Cleaning up partial deployment...")
+                    self.cleanup_failed_deployment()
                     
                     try:
                         time.sleep(60)
