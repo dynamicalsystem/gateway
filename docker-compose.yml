@@ -14,7 +14,7 @@ services:
       TF_VAR_user_ocid: ${OCI_USER_OCID}
       TF_VAR_fingerprint: ${OCI_FINGERPRINT}
       TF_VAR_region: ${OCI_REGION}
-      TF_VAR_compartment_id: ${OCI_COMPARTMENT_ID}
+      TF_VAR_compartment_ocid: ${OCI_COMPARTMENT_ID}
       TF_VAR_availability_domain: ${OCI_AVAILABILITY_DOMAIN}
       # XDG paths inside container
       XDG_DATA_HOME: /data
