@@ -331,7 +331,7 @@ def main():
         "TF_VAR_user_ocid", 
         "TF_VAR_fingerprint",
         "TF_VAR_region",
-        "TF_VAR_compartment_id",
+        "TF_VAR_compartment_ocid",
         "TF_VAR_availability_domain",
         "TF_VAR_ssh_public_key"
     ]
