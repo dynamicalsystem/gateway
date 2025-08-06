@@ -161,10 +161,10 @@ resource "oci_core_instance" "test_instance" {
     "freeformkey${count.index}" = "freeformvalue${count.index}"
   }
 
-  security_attributes = {
-    "oracle-zpr.sensitivity.value" = "low"
-    "oracle-zpr.sensitivity.mode" = "enforce"
-  }
+  # security_attributes = {
+  #   "oracle-zpr.sensitivity.value" = "low"
+  #   "oracle-zpr.sensitivity.mode" = "enforce"
+  # }
 
   preemptible_instance_config {
     preemption_action {
