@@ -78,7 +78,7 @@ def delete_vcn_resources(config, compartment_id, vcn_id, vcn_name):
     
     # Initialize clients
     network_client = oci.core.VirtualNetworkClient(config)
-    compute_client = oci.core.ComputeManagementClient(config)
+    compute_client = oci.core.ComputeClient(config)
     
     deleted_resources = []
     

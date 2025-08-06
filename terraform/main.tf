@@ -76,82 +76,38 @@ data "oci_core_images" "ubuntu_images" {
   sort_order               = "DESC"
 }
 
-# Check for existing VCN
-data "oci_core_vcns" "existing_vcns" {
-  compartment_id = var.compartment_id
-  display_name   = "gateway-vcn"
-}
-
-# VCN (Virtual Cloud Network) - Only create if it doesn't exist
+# VCN (Virtual Cloud Network)
 resource "oci_core_vcn" "main_vcn" {
-  count          = length(data.oci_core_vcns.existing_vcns.virtual_networks) == 0 ? 1 : 0
   compartment_id = var.compartment_id
   display_name   = "gateway-vcn"
   cidr_blocks    = ["10.0.0.0/16"]
   dns_label      = "gatewayvcn"
 }
 
-# Reference to VCN (either existing or newly created)
-locals {
-  vcn_id = length(data.oci_core_vcns.existing_vcns.virtual_networks) > 0 ? data.oci_core_vcns.existing_vcns.virtual_networks[0].id : oci_core_vcn.main_vcn[0].id
-}
-
-# Check for existing Internet Gateway
-data "oci_core_internet_gateways" "existing_igws" {
-  compartment_id = var.compartment_id
-  vcn_id         = local.vcn_id
-  display_name   = "gateway-igw"
-}
-
-# Internet Gateway - Only create if it doesn't exist
+# Internet Gateway
 resource "oci_core_internet_gateway" "main_igw" {
-  count          = length(data.oci_core_internet_gateways.existing_igws.gateways) == 0 ? 1 : 0
   compartment_id = var.compartment_id
-  vcn_id         = local.vcn_id
+  vcn_id         = oci_core_vcn.main_vcn.id
   display_name   = "gateway-igw"
   enabled        = true
 }
 
-locals {
-  igw_id = length(data.oci_core_internet_gateways.existing_igws.gateways) > 0 ? data.oci_core_internet_gateways.existing_igws.gateways[0].id : oci_core_internet_gateway.main_igw[0].id
-}
-
-# Check for existing Route Table
-data "oci_core_route_tables" "existing_route_tables" {
-  compartment_id = var.compartment_id
-  vcn_id         = local.vcn_id
-  display_name   = "gateway-route-table"
-}
-
-# Route Table - Only create if it doesn't exist
+# Route Table
 resource "oci_core_route_table" "main_route_table" {
-  count          = length(data.oci_core_route_tables.existing_route_tables.route_tables) == 0 ? 1 : 0
   compartment_id = var.compartment_id
-  vcn_id         = local.vcn_id
+  vcn_id         = oci_core_vcn.main_vcn.id
   display_name   = "gateway-route-table"
 
   route_rules {
     destination       = "0.0.0.0/0"
-    network_entity_id = local.igw_id
+    network_entity_id = oci_core_internet_gateway.main_igw.id
   }
 }
 
-locals {
-  route_table_id = length(data.oci_core_route_tables.existing_route_tables.route_tables) > 0 ? data.oci_core_route_tables.existing_route_tables.route_tables[0].id : oci_core_route_table.main_route_table[0].id
-}
-
-# Check for existing Security List
-data "oci_core_security_lists" "existing_security_lists" {
-  compartment_id = var.compartment_id
-  vcn_id         = local.vcn_id
-  display_name   = "gateway-security-list"
-}
-
-# Security List - Only create if it doesn't exist
+# Security List
 resource "oci_core_security_list" "main_security_list" {
-  count          = length(data.oci_core_security_lists.existing_security_lists.security_lists) == 0 ? 1 : 0
   compartment_id = var.compartment_id
-  vcn_id         = local.vcn_id
+  vcn_id         = oci_core_vcn.main_vcn.id
   display_name   = "gateway-security-list"
 
   # Allow SSH
@@ -194,31 +150,15 @@ resource "oci_core_security_list" "main_security_list" {
   }
 }
 
-locals {
-  security_list_id = length(data.oci_core_security_lists.existing_security_lists.security_lists) > 0 ? data.oci_core_security_lists.existing_security_lists.security_lists[0].id : oci_core_security_list.main_security_list[0].id
-}
-
-# Check for existing Subnet
-data "oci_core_subnets" "existing_subnets" {
-  compartment_id = var.compartment_id
-  vcn_id         = local.vcn_id
-  display_name   = "gateway-subnet"
-}
-
-# Subnet - Only create if it doesn't exist
+# Subnet
 resource "oci_core_subnet" "main_subnet" {
-  count             = length(data.oci_core_subnets.existing_subnets.subnets) == 0 ? 1 : 0
   compartment_id    = var.compartment_id
-  vcn_id            = local.vcn_id
+  vcn_id            = oci_core_vcn.main_vcn.id
   display_name      = "gateway-subnet"
   cidr_block        = "10.0.0.0/24"
-  route_table_id    = local.route_table_id
-  security_list_ids = [local.security_list_id]
+  route_table_id    = oci_core_route_table.main_route_table.id
+  security_list_ids = [oci_core_security_list.main_security_list.id]
   dns_label         = "gatewaysubnet"
-}
-
-locals {
-  subnet_id = length(data.oci_core_subnets.existing_subnets.subnets) > 0 ? data.oci_core_subnets.existing_subnets.subnets[0].id : oci_core_subnet.main_subnet[0].id
 }
 
 # Compute Instance - This is what we're actually trying to provision
@@ -239,7 +179,7 @@ resource "oci_core_instance" "free_instance" {
   }
 
   create_vnic_details {
-    subnet_id        = local.subnet_id
+    subnet_id        = oci_core_subnet.main_subnet.id
     assign_public_ip = true
     display_name     = "primary-vnic"
   }
