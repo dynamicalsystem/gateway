@@ -34,10 +34,23 @@ fi
 cd terraform
 
 echo "Running terraform init..."
-terraform init
+if ! terraform init; then
+    echo "ERROR: Terraform init failed! Check provider configuration."
+    exit 1
+fi
+echo "✓ Terraform init successful"
+
+echo "Running terraform fmt check..."
+if ! terraform fmt -check -diff; then
+    echo "WARNING: Terraform formatting issues detected. Run 'terraform fmt' to fix."
+fi
 
 echo "Running terraform validate..."
-terraform validate
+if ! terraform validate; then
+    echo "ERROR: Terraform validation failed! Exiting before hitting OCI APIs."
+    exit 1
+fi
+echo "✓ Terraform validation passed"
 
 echo "Running terraform plan with trace logging..."
 terraform plan -no-color > /tmp/plan.txt 2>&1

@@ -186,7 +186,17 @@ resource "oci_core_instance" "free_instance" {
 
   metadata = {
     ssh_authorized_keys = var.ssh_public_key
-    "user_data"         = "#!/bin/bash\napt-get update\napt-get upgrade -y\n# Add any additional setup commands here\n# For example:\n# apt-get install -y docker.io docker-compose\n# usermod -aG docker ubuntu\n"
+    user_data = base64encode(<<-EOF
+      #!/bin/bash
+      apt-get update
+      apt-get upgrade -y
+      
+      # Add any additional setup commands here
+      # For example:
+      # apt-get install -y docker.io docker-compose
+      # usermod -aG docker ubuntu
+    EOF
+    )
   }
 
   depends_on = [
