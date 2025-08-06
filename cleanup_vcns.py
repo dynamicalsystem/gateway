@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Clean up orphaned VCNs and their associated resources in OCI.
-This script will delete VCNs named 'main-vcn' that have no running instances.
+This script will delete VCNs named 'gateway-vcn' that have no running instances.
 """
 
 import os
@@ -240,14 +240,14 @@ def main():
         logger.error(f"Failed to list VCNs: {e}")
         sys.exit(1)
     
-    # Filter for main-vcn VCNs
-    main_vcns = [v for v in vcns if v.display_name == "main-vcn" and v.lifecycle_state == "AVAILABLE"]
+    # Filter for gateway-vcn VCNs
+    main_vcns = [v for v in vcns if v.display_name == "gateway-vcn" and v.lifecycle_state == "AVAILABLE"]
     
     if not main_vcns:
-        logger.info("No 'main-vcn' VCNs found to clean up")
+        logger.info("No 'gateway-vcn' VCNs found to clean up")
         return
     
-    logger.info(f"Found {len(main_vcns)} VCN(s) named 'main-vcn'")
+    logger.info(f"Found {len(main_vcns)} VCN(s) named 'gateway-vcn'")
     
     # Confirm before proceeding
     print(f"\n⚠️  WARNING: This will delete {len(main_vcns)} VCN(s) and all their resources!")
