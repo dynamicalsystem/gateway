@@ -151,9 +151,10 @@ class TerraformDeployer:
     def apply_terraform(self):
         """Apply Terraform configuration"""
         # Set debug environment variables for OCI provider
-        os.environ['TF_LOG'] = 'DEBUG'
+        os.environ['TF_LOG'] = 'TRACE'  # Maximum verbosity
         os.environ['TF_LOG_PATH'] = '/tmp/terraform-debug.log'
-        os.environ['OCI_GO_SDK_DEBUG'] = 'v'  # Verbose OCI SDK debugging
+        os.environ['OCI_GO_SDK_DEBUG'] = 'vv'  # Very verbose OCI SDK debugging
+        os.environ['OCI_GO_SDK_LOG_LEVEL'] = 'debug'  # Additional OCI logging
         
         cmd = "terraform apply -auto-approve -json"
         result = self.run_command(cmd)
@@ -273,6 +274,12 @@ class TerraformDeployer:
                                 capture_next -= 1
                             elif 'shape_config' in line.lower() or 'metadata' in line.lower():
                                 logger.error(f"DEBUG: {line.strip()}")
+                            # Capture response details and error messages
+                            elif '400-CannotParseRequest' in line or 'Response Body' in line or 'response body' in line.lower():
+                                capture_next = 10  # Capture response details
+                                logger.error(f"RESPONSE: {line.strip()}")
+                            elif 'error' in line.lower() and 'DEBUG' in line:
+                                logger.error(f"ERROR_DEBUG: {line.strip()}")
                 
                 if self.check_capacity_error(errors, stderr):
                     logger.info("🔄 Capacity error detected. Will retry in 60 seconds...")
