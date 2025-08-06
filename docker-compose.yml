@@ -37,5 +37,5 @@ services:
       - ${XDG_DATA_HOME:-~/.local/share}/dynamicalsystem/gateway/oci/oci_api_key.pem:/secrets/oci_api_key.pem:ro
       - ${XDG_CONFIG_HOME:-~/.config}/dynamicalsystem/gateway/ssh/id_oci.pub:/secrets/id_oci.pub:ro
     command: ${USE_RESOURCE_MANAGER:+uv run main.py}
-    restart: unless-stopped
+    restart: "no"
     user: ${USER_ID:-1000}:${GROUP_ID:-1000}

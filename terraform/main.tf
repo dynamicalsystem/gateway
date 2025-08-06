@@ -3,7 +3,7 @@ terraform {
   required_providers {
     oci = {
       source  = "oracle/oci"
-      version = "~> 6.0"
+      version = "~> 6.18"
     }
   }
 }
@@ -176,7 +176,8 @@ resource "oci_core_instance" "free_instance" {
   source_details {
     source_type             = "image"
     source_id               = data.oci_core_images.ubuntu_images.images[0].id
-    boot_volume_size_in_gbs = 50
+    boot_volume_size_in_gbs = 47
+    boot_volume_vpus_per_gb = null
   }
 
   create_vnic_details {
