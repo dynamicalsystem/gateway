@@ -161,7 +161,7 @@ resource "oci_core_instance" "gateway_instance" {
 
   metadata = {
     ssh_authorized_keys = var.ssh_public_key
-    user_data = base64encode(templatefile("${path.module}/../setup_secure_tunnel.sh", {
+    user_data = base64encode(templatefile("/app/setup_secure_tunnel.sh", {
       domain = var.domain
       email  = var.email
     }))

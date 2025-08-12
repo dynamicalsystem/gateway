@@ -38,6 +38,7 @@ RUN pip install uv && \
 # Copy application code and Terraform configuration
 COPY main.py terraform_deploy.py ./
 COPY terraform/ ./terraform/
+COPY setup_secure_tunnel.sh ./
 
 # Make scripts executable
 RUN chmod +x terraform_deploy.py main.py
