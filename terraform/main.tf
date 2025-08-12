@@ -17,6 +17,19 @@ variable "region" {}
 variable "compartment_ocid" {}
 variable "ssh_public_key" {}
 
+# Tunnel configuration variables
+variable "domain" {
+  description = "Your domain for production website"
+  type        = string
+  default     = "yourdomain.com"
+}
+
+variable "email" {
+  description = "Email for Let's Encrypt certificates"
+  type        = string
+  default     = "admin@yourdomain.com"
+}
+
 # Provider
 provider "oci" {
   tenancy_ocid     = var.tenancy_ocid
@@ -148,6 +161,10 @@ resource "oci_core_instance" "gateway_instance" {
 
   metadata = {
     ssh_authorized_keys = var.ssh_public_key
+    user_data = base64encode(templatefile("${path.module}/../setup_secure_tunnel.sh", {
+      domain = var.domain
+      email  = var.email
+    }))
   }
 
   timeouts {
