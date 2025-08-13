@@ -5,8 +5,8 @@
 set -e
 
 # Variables (to be replaced or set via environment)
-DOMAIN="${DOMAIN:-yourdomain.com}"
-EMAIL="${EMAIL:-your-email@example.com}"
+DOMAIN="${domain}"
+EMAIL="${email}"
 
 # Update system
 apt-get update
