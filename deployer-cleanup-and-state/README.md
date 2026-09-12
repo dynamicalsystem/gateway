@@ -72,8 +72,15 @@ Code, `terraform_deploy.py` and `terraform/main.tf` at commit 73ed685:
   retries on it. That error can leave a created-but-unattached volume behind.
 - `deploy_with_retry` retries every 60 seconds forever on capacity errors,
   with no upper bound on attempts or wall time.
-- `terraform/terraform.tfstate` in the repo is a 0-byte file and is not
-  gitignored.
+- `terraform/terraform.tfstate` in the Documents clone is a 0-byte untracked
+  file; it was never committed.
+- The live default security list carries a hand-added WireGuard rule
+  (UDP 51820, description "Wireguard") that is not in `main.tf`. Found by
+  importing the live resources and planning: the plan would have removed it.
+- `source_details.source_id` resolves to the newest Canonical Ubuntu 22.04
+  image at plan time. A new image publication changes it, and that attribute
+  forces instance replacement. Same for `metadata.user_data` and
+  `hostname_label`. Nothing in the config guarded against this.
 
 ## Orientation
 
@@ -124,7 +131,7 @@ Agreed with Simon on 2026-09-12, including the naming convention and tagging the
    OCI minimum and the 200 GB Always Free allowance.
 4. Add `scripts/oci_inventory.py` (from the session scratchpad) and run it at
    the end of a successful deploy; exit non-zero and log if any boot or block
-   volume is unattached or carries no `managed-by` tag.
+   volume is unattached or any instance carries no `managed-by` tag.
 5. Bound the retry loop with a retry deadline: elapsed clock time after which
    the deployer gives up. Default 24 hours, overridable by
    `GATEWAY_RETRY_DEADLINE_HOURS`.
@@ -152,6 +159,23 @@ on branch `deployer-cleanup-and-state`.
 
 - Live instance, VCN, and subnet renamed and tagged in place per the
   convention (display names only; hostname label and DNS labels untouched).
+- Branch `deployer-cleanup-and-state`: backend block, naming variables and
+  tags, 50 GB boot volume, `lifecycle.ignore_changes` on image, metadata and
+  hostname label, the WireGuard rule declared, cleanup target fixed with real
+  stderr, retry deadline (`GATEWAY_RETRY_DEADLINE_HOURS`, default 24), post-deploy
+  inventory check, `scripts/oci_inventory.py`, `scripts/import_existing.py`,
+  Dockerfile and compose updated, emoji removed from log lines.
+- Verified locally with Terraform 1.5.7: `terraform init -backend-config=path=`
+  wrote state to the given path; all six live resources imported; plan is
+  0 to add, 3 to change (rename and tag the route table, security list and
+  internet gateway), 0 to destroy.
+- The verified state was copied to
+  `~/.local/state/dynamicalsystem/gateway/terraform/terraform.tfstate` on
+  Simon's Mac, which is the standalone-mode path the compose file mounts.
+  If the container runs on a tinsnip host, that host's `/state` mount needs
+  the same file, or `scripts/import_existing.py --run` executed there once.
+- Inventory run against the tenancy passes: one tagged instance, one attached
+  volume, 50 GB total.
 
 ## Outcomes
 
@@ -160,8 +184,9 @@ on branch `deployer-cleanup-and-state`.
 Tests:
 - [ ] With a deployed instance, restart the gateway container; `terraform plan`
       reports no changes and the tenancy still has exactly one instance.
-- [ ] The state file exists under the mounted `/state` path on the host after
-      the first successful apply.
+- [/] The state file exists under the mounted `/state` path on the host after
+      the first successful apply. Verified locally: init honoured the backend
+      path and wrote a 36 KB state there after import.
 
 ### Outcome 2: A failed apply leaves no unattached volume
 
@@ -169,13 +194,13 @@ Tests:
 - [ ] Simulate a capacity failure (for example, request more OCPUs than the
       A1 limit allows) and confirm the inventory shows no orphaned boot or
       block volume after the retry loop gives up or is stopped.
-- [ ] `cleanup_failed_deployment` targets a resource name that exists in
-      `main.tf`; a unit test or a `terraform validate` with the target proves it.
+- [/] `cleanup_failed_deployment` targets a resource name that exists in
+      `main.tf`. Verified by grep; `terraform validate` passes.
 
 ### Outcome 3: Orphans are detected, not discovered on an invoice
 
 Tests:
-- [ ] `scripts/oci_inventory.py` runs against the tenancy with the `.oci`
+- [/] `scripts/oci_inventory.py` runs against the tenancy with the `.oci`
       config and prints instances, volumes, attachments, and total GB.
 - [ ] After a successful deploy, the deployer runs the inventory and exits
       non-zero if any volume is unattached.
@@ -183,9 +208,9 @@ Tests:
 ### Outcome 4: The Terraform config is honest about the free tier
 
 Tests:
-- [ ] `boot_volume_size_in_gbs` is 50 and the comment states the OCI minimum
+- [/] `boot_volume_size_in_gbs` is 50 and the comment states the OCI minimum
       and the 200 GB allowance.
-- [ ] `terraform plan` against the live tenancy shows no change to the boot
+- [/] `terraform plan` against the live tenancy shows no change to the boot
       volume size.
 
 ### Outcome 5: Resources are identifiable by name and tag
@@ -194,5 +219,5 @@ Tests:
 - [ ] A fresh deploy with `service=gateway environment=test` produces an
       instance, VCN, and subnet named per the convention, each tagged
       `service`, `environment`, `managed-by=terraform`.
-- [ ] The inventory check lists the live `gateway-instance` as untagged until
-      it is tagged in place, and clean afterwards.
+- [/] The inventory check lists the live instance as untagged until it is
+      tagged in place, and clean afterwards. Tagged 2026-09-12; passes.
