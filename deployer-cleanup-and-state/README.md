@@ -2,10 +2,10 @@
 loop: deployer-cleanup-and-state
 product: gateway
 owner: dynamicalsystem
-status: Decide
+status: Act
 parent: null
 blocked-by: []
-worktrees: []
+worktrees: [deployer-cleanup-and-state]
 prs: []
 triggers:
   - when: Oracle answers billing support request 16281429
@@ -16,7 +16,7 @@ triggers:
 
 ## Status
 
-Decide
+Act
 
 **Owner:** dynamicalsystem
 
@@ -112,7 +112,7 @@ volume would have made today's investigation a two-minute check.
 
 ## Decision
 
-Agreed with Simon on 2026-09-12, except where marked.
+Agreed with Simon on 2026-09-12, including the naming convention and tagging the live instance in place.
 
 1. Add a `backend "local" {}` block to `main.tf` so the state path passed at
    init is honoured, and store state under the mounted `/state` volume. Remove
@@ -128,7 +128,7 @@ Agreed with Simon on 2026-09-12, except where marked.
 5. Bound the retry loop with a retry deadline: elapsed clock time after which
    the deployer gives up. Default 24 hours, overridable by
    `GATEWAY_RETRY_DEADLINE_HOURS`.
-6. Naming convention (proposed by Claude, awaiting Simon):
+6. Naming convention:
    - Instance display name and hostname label are `<service>-<environment>`,
      matching the tinsnip service user (`gateway-prod`). OCI derives the boot
      volume name from the instance name.
@@ -147,8 +147,11 @@ and anything about the Oracle rating problem itself.
 
 ## Action
 
-Not started. Data-plane worktree to be created as
-`~/work/gateway/deployer-cleanup-and-state` on a branch of the same name.
+Started 2026-09-12. Data-plane worktree `~/work/gateway/deployer-cleanup-and-state`
+on branch `deployer-cleanup-and-state`.
+
+- Live instance, VCN, and subnet renamed and tagged in place per the
+  convention (display names only; hostname label and DNS labels untouched).
 
 ## Outcomes
 
