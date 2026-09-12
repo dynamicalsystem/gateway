@@ -39,7 +39,7 @@ RUN pip install uv && \
 COPY main.py terraform_deploy.py ./
 COPY terraform/ ./terraform/
 COPY scripts/ ./scripts/
-COPY setup_secure_tunnel.sh.tpl ./
+COPY setup_secure_tunnel.sh.tpl setup_tinsnip_box.sh.tpl ./
 
 # Make scripts executable
 RUN chmod +x terraform_deploy.py main.py
