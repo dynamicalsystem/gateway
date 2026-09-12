@@ -112,20 +112,35 @@ volume would have made today's investigation a two-minute check.
 
 ## Decision
 
-Proposed, pending Simon's agreement:
+Agreed with Simon on 2026-09-12, except where marked.
 
 1. Add a `backend "local" {}` block to `main.tf` so the state path passed at
    init is honoured, and store state under the mounted `/state` volume. Remove
    the 0-byte `terraform/terraform.tfstate` and gitignore `*.tfstate*`.
-2. Fix the cleanup target to `oci_core_instance.gateway_instance`, and make
+2. Fix the cleanup target to the instance resource that exists, and make
    cleanup failure log the actual stderr instead of "may have failed".
-3. Set `boot_volume_size_in_gbs` to 50 and correct the comment to state the
+3. Set `boot_volume_size_in_gbs` to 50. Simon asked for 49; OCI rejects boot
+   volumes under 50 GB at launch, so 50 is the floor. The comment states the
    OCI minimum and the 200 GB Always Free allowance.
 4. Add `scripts/oci_inventory.py` (from the session scratchpad) and run it at
    the end of a successful deploy; exit non-zero and log if any boot or block
-   volume is unattached.
-5. Bound the retry loop with a configurable maximum wall time, defaulting to
-   something generous like 24 hours, so a misconfiguration cannot spin forever.
+   volume is unattached or carries no `managed-by` tag.
+5. Bound the retry loop with a retry deadline: elapsed clock time after which
+   the deployer gives up. Default 24 hours, overridable by
+   `GATEWAY_RETRY_DEADLINE_HOURS`.
+6. Naming convention (proposed by Claude, awaiting Simon):
+   - Instance display name and hostname label are `<service>-<environment>`,
+     matching the tinsnip service user (`gateway-prod`). OCI derives the boot
+     volume name from the instance name.
+   - VCN and subnet use the same stem: `<service>-<environment>-vcn`,
+     `<service>-<environment>-subnet`.
+   - Every resource carries freeform tags `service`, `environment`, and
+     `managed-by=terraform`.
+   - `service` and `environment` are Terraform variables fed from
+     `TIN_SERVICE_NAME` and the tinsnip environment the container already has.
+   - Applies to new deployments. The live instance's display name can be
+     updated in place; its hostname label and VCN are left alone because
+     changing them forces replacement.
 
 Out of scope: removing `main.py` Resource Manager mode, the route-sync files,
 and anything about the Oracle rating problem itself.
@@ -169,3 +184,12 @@ Tests:
       and the 200 GB allowance.
 - [ ] `terraform plan` against the live tenancy shows no change to the boot
       volume size.
+
+### Outcome 5: Resources are identifiable by name and tag
+
+Tests:
+- [ ] A fresh deploy with `service=gateway environment=test` produces an
+      instance, VCN, and subnet named per the convention, each tagged
+      `service`, `environment`, `managed-by=terraform`.
+- [ ] The inventory check lists the live `gateway-instance` as untagged until
+      it is tagged in place, and clean afterwards.
