@@ -73,25 +73,28 @@ the state on the machine Simon already has.
 ## Action
 
 - PR #2 merged 2026-09-12 (squash 5033a24).
-- Deployer launched 2026-09-12 23:46 BST on Simon's Mac; log in the session
-  scratchpad. Attempt 1 in progress at time of writing.
+- Deployer launched 2026-09-12 23:46 BST on Simon's Mac. Attempt 1 succeeded
+  at 23:47 (41 seconds, no capacity retry). Public IP 140.238.91.154.
+  Instance ocid ends `oh76udaq`, boot volume ocid ends `ot2tqi5`.
+- Cloud-init finished at 22:49 UTC, 133 seconds after boot.
+- Next: `hosts/agent/` in tinsnip and the OCI creds the box needs, per Simon.
 
 ## Outcomes
 
 ### Outcome 1: A second box exists, reachable over SSH, ready for tinsnip
 
 Tests:
-- [ ] `terraform apply` succeeds and outputs a public IP.
-- [ ] `ssh ubuntu@<ip>` with `~/.ssh/id_oci` works and `hostname -s` is `agent`.
-- [ ] `/var/log/tinsnip-first-boot.done` exists and `podman --version` is 4.9 or later.
-- [ ] `loginctl show-user ubuntu -p Linger` reports yes.
+- [/] `terraform apply` succeeds and outputs a public IP. 140.238.91.154.
+- [/] `ssh ubuntu@<ip>` with `~/.ssh/id_oci` works and `hostname -s` is `agent`.
+- [/] `/var/log/tinsnip-first-boot.done` exists and `podman --version` is 4.9 or later. podman 4.9.3, Ubuntu 24.04.4.
+- [/] `loginctl show-user ubuntu -p Linger` reports yes. ufw active with 22/80/443; unprivileged ports from 80.
 
 ### Outcome 2: The new deployer path behaves on a fresh deployment
 
 Tests:
-- [ ] State lands at `~/.local/state/dynamicalsystem/agent/terraform/terraform.tfstate`.
-- [ ] The post-deploy inventory passes: two tagged instances, two attached volumes, 100 GB.
-- [ ] Gateway's own state still plans clean afterwards.
+- [/] State lands at `~/.local/state/dynamicalsystem/agent/terraform/terraform.tfstate`.
+- [/] The post-deploy inventory passes: two tagged instances, two attached volumes, 100 GB.
+- [/] Gateway's own state still plans clean afterwards: 0 to add, 0 to destroy, the same 3 pending renames as before.
 
 ### Outcome 3: The box stays free
 
