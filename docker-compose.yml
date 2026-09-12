@@ -23,6 +23,8 @@ services:
       XDG_STATE_HOME: /state
       TIN_NAMESPACE: ${TIN_NAMESPACE:-dynamicalsystem}
       TIN_SERVICE_NAME: ${TIN_SERVICE_NAME:-gateway}
+      TIN_SERVICE_ENVIRONMENT: ${TIN_SERVICE_ENVIRONMENT:-prod}
+      GATEWAY_RETRY_DEADLINE_HOURS: ${GATEWAY_RETRY_DEADLINE_HOURS:-24}
       # Legacy mode flag
       USE_RESOURCE_MANAGER: ${USE_RESOURCE_MANAGER:-false}
       # Secret paths inside container

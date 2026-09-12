@@ -56,6 +56,14 @@ class TerraformDeployer:
         else:
             logger.warning(f"SSH public key not found at: {ssh_key_path}")
         
+        # Naming convention inputs, from tinsnip
+        os.environ.setdefault('TF_VAR_service', os.environ.get('TIN_SERVICE_NAME', 'gateway'))
+        os.environ.setdefault('TF_VAR_environment', os.environ.get('TIN_SERVICE_ENVIRONMENT', 'prod'))
+
+        # Retry deadline: elapsed clock time after which the loop gives up
+        self.retry_deadline_hours = float(os.environ.get('GATEWAY_RETRY_DEADLINE_HOURS', '24'))
+        self.started_at = time.monotonic()
+
         # Set up state file path in XDG hierarchy
         xdg_state_home = os.environ.get('XDG_STATE_HOME', '/state')
         tin_namespace = os.environ.get('TIN_NAMESPACE', 'dynamicalsystem')
@@ -178,11 +186,12 @@ class TerraformDeployer:
         """Clean up failed deployment to avoid resource accumulation"""
         try:
             logger.info("Running terraform destroy to clean up failed resources...")
-            result = self.run_command("terraform destroy -auto-approve -target=oci_core_instance.free_instance")
+            result = self.run_command("terraform destroy -auto-approve -target=oci_core_instance.gateway_instance")
             if result.returncode == 0:
                 logger.info("Partial cleanup successful")
             else:
-                logger.warning("Cleanup may have failed, continuing anyway")
+                logger.warning("Cleanup failed, continuing anyway. stderr follows:")
+                logger.warning(result.stderr.strip() or result.stdout.strip())
         except Exception as e:
             logger.warning(f"Error during cleanup: {e}")
     
@@ -225,7 +234,13 @@ class TerraformDeployer:
         
         while True:
             self.attempt += 1
-            
+
+            elapsed_hours = (time.monotonic() - self.started_at) / 3600
+            if elapsed_hours > self.retry_deadline_hours:
+                logger.error(f"Retry deadline of {self.retry_deadline_hours}h exceeded after "
+                             f"{self.attempt - 1} attempts. Giving up.")
+                return 2
+
             logger.info(f"{'='*60}")
             logger.info(f"Attempt #{self.attempt} - Applying Terraform at {datetime.now()}")
             logger.info(f"{'='*60}")
@@ -233,7 +248,7 @@ class TerraformDeployer:
             returncode, errors, stderr = self.apply_terraform()
             
             if returncode == 0:
-                logger.info("✅ Deployment SUCCEEDED!")
+                logger.info("[/] Deployment SUCCEEDED")
                 
                 # Show outputs
                 logger.info("Fetching Terraform outputs...")
@@ -246,11 +261,11 @@ class TerraformDeployer:
                     except json.JSONDecodeError:
                         logger.warning("Could not parse Terraform outputs as JSON")
                         logger.info(output_result.stdout)
-                
-                break
+
+                return self.check_inventory()
             
             else:
-                logger.error("❌ Deployment FAILED")
+                logger.error("[x] Deployment FAILED")
                 
                 if errors:
                     logger.error("Error details:")
@@ -282,7 +297,7 @@ class TerraformDeployer:
                                 logger.error(f"ERROR_DEBUG: {line.strip()}")
                 
                 if self.check_capacity_error(errors, stderr):
-                    logger.info("🔄 Capacity error detected. Will retry in 60 seconds...")
+                    logger.info("[~] Capacity error detected. Will retry in 60 seconds...")
                     logger.info("   (Press Ctrl+C to stop)")
                     
                     # Try to clean up any partial resources before retrying
@@ -292,12 +307,24 @@ class TerraformDeployer:
                     try:
                         time.sleep(60)
                     except KeyboardInterrupt:
-                        logger.warning("⚠️  Deployment cancelled by user")
-                        break
+                        logger.warning("Deployment cancelled by user")
+                        return 130
                 else:
                     logger.error("Non-capacity error detected. Please check your configuration.")
                     logger.error(f"Full error output: {stderr}")
-                    break
+                    return 1
+
+    def check_inventory(self):
+        """Run the read-only tenancy inventory and fail on orphans"""
+        script = Path(__file__).resolve().parent / 'scripts' / 'oci_inventory.py'
+        logger.info("Running tenancy inventory to check for orphaned resources...")
+        result = subprocess.run([sys.executable, str(script)], capture_output=True, text=True)
+        for line in (result.stdout + result.stderr).splitlines():
+            logger.info(f"inventory: {line}")
+        if result.returncode != 0:
+            logger.error("Inventory found orphaned or untagged resources. Deploy succeeded but needs attention.")
+            return 3
+        return 0
 
 
 def main():
@@ -365,7 +392,7 @@ def main():
     
     deployer = TerraformDeployer()
     try:
-        deployer.deploy_with_retry()
+        sys.exit(deployer.deploy_with_retry())
     except Exception as e:
         logger.exception(f"Unexpected error occurred: {e}")
         sys.exit(1)
