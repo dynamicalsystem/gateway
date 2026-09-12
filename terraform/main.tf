@@ -229,7 +229,7 @@ resource "oci_core_instance" "gateway_instance" {
     user_data = base64encode(templatefile(var.user_data_template, {
       domain   = var.domain
       email    = var.email
-      hostname = local.name
+      hostname = var.service # boxes are named by service alone, like the live gateway
     }))
   }
 
