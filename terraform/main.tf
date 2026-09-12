@@ -50,6 +50,12 @@ variable "email" {
   default     = "admin@yourdomain.com"
 }
 
+variable "ubuntu_version" {
+  description = "Canonical Ubuntu release for new instances. Ignored for existing ones (see lifecycle)."
+  type        = string
+  default     = "22.04"
+}
+
 variable "user_data_template" {
   description = "Path to the cloud-init template rendered into user_data"
   type        = string
@@ -87,7 +93,7 @@ data "oci_identity_availability_domain" "ad" {
 data "oci_core_images" "ubuntu_images" {
   compartment_id           = var.compartment_ocid
   operating_system         = "Canonical Ubuntu"
-  operating_system_version = "22.04"
+  operating_system_version = var.ubuntu_version
   shape                    = "VM.Standard.A1.Flex"
   sort_by                  = "TIMECREATED"
   sort_order               = "DESC"
@@ -221,8 +227,9 @@ resource "oci_core_instance" "gateway_instance" {
   metadata = {
     ssh_authorized_keys = var.ssh_public_key
     user_data = base64encode(templatefile(var.user_data_template, {
-      domain = var.domain
-      email  = var.email
+      domain   = var.domain
+      email    = var.email
+      hostname = var.service # boxes are named by service alone, like the live gateway
     }))
   }
 
