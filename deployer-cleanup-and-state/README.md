@@ -6,7 +6,7 @@ status: Act
 parent: null
 blocked-by: []
 worktrees: [deployer-cleanup-and-state]
-prs: []
+prs: [https://github.com/dynamicalsystem/gateway/pull/1]
 triggers:
   - when: Oracle answers billing support request 16281429
     then: "Record whether new volumes in this tenancy rate as Always Free"
