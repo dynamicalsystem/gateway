@@ -18,3 +18,8 @@ Cross-loop triggers and observations that outlive their owning loops.
 - 2026-09-12 gateway: the Documents clone has untracked route-sync files
   (Caddyfile.template, sync_routes.sh, setup_route_sync.sh, teardown_route_sync.sh,
   README_ROUTE_SYNC.md, ROUTE_SYNC_SETUP.md). Decide whether they belong in the repo.
+- 2026-09-12 gateway: README's "Tinsnip Deployment" section describes a
+  service-user and machine/setup.sh model that no longer exists. Current
+  tinsnip is a Quadlet repo where `gateway` is the hostname of the Oracle box;
+  the deployer is a hand-run bootstrap tool, not a tinsnip unit. Rewrite the
+  README section or delete it.
