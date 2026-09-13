@@ -20,13 +20,18 @@ apt-get install -y --no-install-recommends \
     git \
     curl \
     ca-certificates \
-    ufw
+    ufw \
+    wireguard
 
 # OCI Ubuntu images ship iptables rules that block everything but SSH;
-# ufw manages them from here on.
+# ufw manages them from here on. Private boxes expose only WireGuard, plus
+# SSH until the tunnel is proven and the security list closes 22.
 ufw allow OpenSSH
+ufw allow 51820/udp
+%{ if public ~}
 ufw allow 80/tcp
 ufw allow 443/tcp
+%{ endif ~}
 ufw --force enable
 
 # Rootless podman needs the user's systemd instance to outlive logins.

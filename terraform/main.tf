@@ -50,6 +50,18 @@ variable "email" {
   default     = "admin@yourdomain.com"
 }
 
+variable "public" {
+  description = "Expose 80/443 to the internet. Private boxes get only WireGuard (and SSH while ssh_public is true)."
+  type        = bool
+  default     = true
+}
+
+variable "ssh_public" {
+  description = "Allow SSH from the internet. Set false once the box is reachable over WireGuard."
+  type        = bool
+  default     = true
+}
+
 variable "ubuntu_version" {
   description = "Canonical Ubuntu release for new instances. Ignored for existing ones (see lifecycle)."
   type        = string
@@ -135,38 +147,34 @@ resource "oci_core_default_security_list" "gateway_sl" {
   display_name               = "${local.name}-security-list"
   freeform_tags              = local.tags
 
-  # Allow SSH
-  ingress_security_rules {
-    protocol = "6"
-    source   = "0.0.0.0/0"
-    tcp_options {
-      min = 22
-      max = 22
+  # Allow SSH from anywhere, until the box is reachable over WireGuard
+  dynamic "ingress_security_rules" {
+    for_each = var.ssh_public ? [1] : []
+    content {
+      protocol = "6"
+      source   = "0.0.0.0/0"
+      tcp_options {
+        min = 22
+        max = 22
+      }
     }
   }
 
-  # Allow HTTP
-  ingress_security_rules {
-    protocol = "6"
-    source   = "0.0.0.0/0"
-    tcp_options {
-      min = 80
-      max = 80
+  # Allow HTTP and HTTPS only on public boxes
+  dynamic "ingress_security_rules" {
+    for_each = var.public ? [80, 443] : []
+    content {
+      protocol = "6"
+      source   = "0.0.0.0/0"
+      tcp_options {
+        min = ingress_security_rules.value
+        max = ingress_security_rules.value
+      }
     }
   }
 
-  # Allow HTTPS
-  ingress_security_rules {
-    protocol = "6"
-    source   = "0.0.0.0/0"
-    tcp_options {
-      min = 443
-      max = 443
-    }
-  }
-
-  # Allow WireGuard. This rule was added by hand in the console; it is
-  # declared here so an apply does not remove it.
+  # Allow WireGuard. On gateway this rule was added by hand in the console;
+  # it is declared here so an apply does not remove it.
   ingress_security_rules {
     description = "Wireguard"
     protocol    = "17"
@@ -230,6 +238,7 @@ resource "oci_core_instance" "gateway_instance" {
       domain   = var.domain
       email    = var.email
       hostname = var.service # boxes are named by service alone, like the live gateway
+      public   = var.public
     }))
   }
 
