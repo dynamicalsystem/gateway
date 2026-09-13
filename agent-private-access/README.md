@@ -5,8 +5,8 @@ owner: dynamicalsystem
 status: Act
 parent: null
 blocked-by: []
-worktrees: [agent-private-access]
-prs: []
+worktrees: []
+prs: [https://github.com/dynamicalsystem/gateway/pull/3]
 triggers: []
 ---
 
@@ -67,6 +67,21 @@ installs WireGuard and opens only 51820/udp for private boxes.
 ## Action
 
 Started 2026-09-13.
+
+- PR #3: `public` and `ssh_public` flags; tinsnip template installs
+  WireGuard and gates 80/443 on `public`.
+- agent: wireguard installed, keypair generated, `/etc/wireguard/wg0.conf`
+  written as peer 10.100.0.4/24 of the hub at 152.67.153.4:51820 with the hub
+  public key still a placeholder. ufw now allows OpenSSH and 51820/udp only.
+  agent public key: `8mY5vOSwfTtKzZViGSzQ+a4DYwgbElFzt5x9xdKqNnU=`
+- Simon's SSH config: `Host agent` (10.100.0.4) and `Host agent-public`
+  (140.238.91.154), both with id_oci.
+- Blocked on gateway: needs the hub public key read from
+  `/etc/wireguard/public.key` and the agent peer added to wg0. The sandbox
+  refuses production reads, so Simon runs those two commands.
+- Blocked on the laptop and homelab: their peer configs allow only
+  10.100.0.1/32, so they must add 10.100.0.4/32 (or 10.100.0.0/24) to
+  AllowedIPs to reach agent through the hub.
 
 ## Outcomes
 
