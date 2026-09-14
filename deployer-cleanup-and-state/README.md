@@ -117,6 +117,18 @@ this (instances, boot volumes, block volumes, attachments, backups, total GB).
 Running it after a successful deploy and failing loudly on any unattached
 volume would have made today's investigation a two-minute check.
 
+Root cause of the charge, established 2026-09-14 from per-volume usage
+history: August 2025 had 19 boot volumes (722 GB-months, GBP 14.72) from
+the retry loop running with lost state. That exceeded the 200 GB allowance,
+so every volume was correctly rated paid, including gateway's, created
+2025-08-13 into that state. After cleanup the tenancy has held one 50 GB
+volume since October 2025, but Oracle's documented automatic transition
+from paid to Always Free never fired. The agent volume, created 2026-09-12
+inside the allowance, produces no block volume usage rows at all, so it is
+rated free. The gateway volume is stuck, not misconfigured: there is no
+free-tier setting on a volume. Fallback if Oracle does not fix it: clone
+the boot volume into a fresh one and swap it in.
+
 ## Decision
 
 Agreed with Simon on 2026-09-12, including the naming convention and tagging the live instance in place.
