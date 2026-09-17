@@ -7,6 +7,10 @@ looks like an orphan:
 
   - a boot or block volume that is not attached to an instance
   - an instance without a managed-by freeform tag
+  - a volume without Oracle's Always Free marker (system tag
+    orcl-cloud.free-tier-retained) while the tenancy is inside the 200 GB
+    allowance. Such a volume is billed at paid rates and Oracle's automatic
+    transition to free has not fired; it needs a support request.
 
 Credentials come from TF_VAR_* environment variables (as in the deploy
 container) or fall back to ~/.oci/config.
@@ -19,6 +23,11 @@ from pathlib import Path
 import oci
 
 FREE_ALLOWANCE_GB = 200
+
+
+def is_free_tier(volume):
+    """True if Oracle has marked the volume as Always Free."""
+    return (volume.system_tags or {}).get("orcl-cloud", {}).get("free-tier-retained") == "true"
 
 
 def load_config():
@@ -57,6 +66,7 @@ def main():
     ads = [a.name for a in identity.list_availability_domains(tenancy).data]
 
     problems = []
+    unmarked = []
     attached_boot, attached_block = {}, {}
 
     print("=== INSTANCES ===")
@@ -85,9 +95,12 @@ def main():
                     continue
                 total_gb += bv.size_in_gbs
                 att = attached_boot.get(bv.id)
-                print(f"{bv.lifecycle_state:10} {bv.size_in_gbs:5}GB vpus={bv.vpus_per_gb:3} {bv.time_created:%Y-%m-%d} {bv.display_name:45} attached={att or 'NO'}")
+                free = is_free_tier(bv)
+                print(f"{bv.lifecycle_state:10} {bv.size_in_gbs:5}GB vpus={bv.vpus_per_gb:3} {bv.time_created:%Y-%m-%d} {bv.display_name:45} attached={att or 'NO'} free-tier={'yes' if free else 'NO'}")
                 if not att:
                     problems.append(f"boot volume {bv.display_name} ({bv.size_in_gbs} GB) is not attached")
+                if not free:
+                    unmarked.append(f"boot volume {bv.display_name} ({bv.size_in_gbs} GB)")
 
     print("\n=== BLOCK VOLUMES ===")
     for c in compartments:
@@ -96,9 +109,12 @@ def main():
                 continue
             total_gb += v.size_in_gbs
             att = attached_block.get(v.id)
-            print(f"{v.lifecycle_state:10} {v.size_in_gbs:5}GB vpus={v.vpus_per_gb:3} {v.time_created:%Y-%m-%d} {v.display_name:45} attached={att or 'NO'}")
+            free = is_free_tier(v)
+            print(f"{v.lifecycle_state:10} {v.size_in_gbs:5}GB vpus={v.vpus_per_gb:3} {v.time_created:%Y-%m-%d} {v.display_name:45} attached={att or 'NO'} free-tier={'yes' if free else 'NO'}")
             if not att:
                 problems.append(f"block volume {v.display_name} ({v.size_in_gbs} GB) is not attached")
+            if not free:
+                unmarked.append(f"block volume {v.display_name} ({v.size_in_gbs} GB)")
 
     print("\n=== VOLUME BACKUPS ===")
     for c in compartments:
@@ -112,13 +128,19 @@ def main():
     print(f"\nTOTAL live volume storage: {total_gb} GB (Always Free allowance is {FREE_ALLOWANCE_GB} GB)")
     if total_gb > FREE_ALLOWANCE_GB:
         problems.append(f"total volume storage {total_gb} GB exceeds the {FREE_ALLOWANCE_GB} GB allowance")
+        for u in unmarked:
+            print(f"  note: {u} is billed at paid rates, expected while over the allowance")
+    else:
+        for u in unmarked:
+            problems.append(f"{u} has no free-tier-retained tag while the tenancy is inside the allowance: "
+                            "it is being billed and Oracle's automatic transition has not fired; raise a support request")
 
     if problems:
         print("\nPROBLEMS:")
         for p in problems:
             print(f"  [x] {p}")
         return 1
-    print("\n[/] no orphaned volumes, all instances tagged")
+    print("\n[/] no orphaned volumes, all instances tagged, all volumes marked Always Free")
     return 0
 
 
