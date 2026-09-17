@@ -7,8 +7,9 @@ Cross-loop triggers and observations that outlive their owning loops.
 - [x] when: Oracle answers billing support request 16281429
       then: "Record in deployer-cleanup-and-state Orientation whether new volumes in this tenancy rate as Always Free; if not, every orphan the deployer leaves is billed at full rate"
       resolved: 2026-09-14 UTC. Billing replied that rating disputes are Technical Support's; superseded by the trigger below.
-- [ ] when: Oracle answers technical support request 4-0003772067 (Billing & Cost Management > Billing > Subscription Usage and Rate Card)
+- [~] when: Oracle answers technical support request 4-0003772067 (Billing & Cost Management > Billing > Subscription Usage and Rate Card)
       then: "Record whether both boot volumes (gateway-prod, agent-prod) now rate as Always Free and whether credits were issued; if not, decide whether to keep the agent box"
+      progress: 2026-09-17 Oracle Operations converted the gateway volume to free tier; it now carries system tag orcl-cloud.free-tier-retained=true. Usage rows through 17 Sep still show cost (conversion landed mid-day); confirm zero-cost rows from 18 Sep. Credits for past invoices not yet addressed. The agent volume was already rating free (no usage rows since creation).
 
 ## Observations
 
