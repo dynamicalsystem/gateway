@@ -189,6 +189,12 @@ on branch `deployer-cleanup-and-state`.
 - Inventory run against the tenancy passes: one tagged instance, one attached
   volume, 50 GB total.
 
+- 2026-09-17: inventory now checks each volume for Oracle's Always Free
+  marker (system tag `orcl-cloud.free-tier-retained`) and fails when one is
+  missing while the tenancy is inside the allowance. Prompted by SR
+  4-0003772067, where Operations converting the gateway volume amounted to
+  adding that tag. Both volumes pass.
+
 ## Outcomes
 
 ### Outcome 1: A container restart does not create a second instance
