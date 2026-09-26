@@ -24,6 +24,33 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+CAPACITY_INDICATORS = (
+    "Out of host capacity",
+    "OutOfHostCapacity",
+    "insufficient capacity",
+    "no capacity",
+    "CannotAttachVolume",
+)
+# Service limit errors need a person, not a retry loop
+LIMIT_INDICATORS = ("vcn-count", "limit exceeded", "quota exceeded", "LimitExceeded")
+
+
+def classify_error(errors, stderr):
+    """'limit' for service-limit errors, 'capacity' for retryable capacity
+    errors, else 'other'. Limits win over capacity when both appear."""
+    text = (" ".join(errors) + " " + (stderr or "")).lower()
+    if any(ind.lower() in text for ind in LIMIT_INDICATORS):
+        return "limit"
+    if any(ind.lower() in text for ind in CAPACITY_INDICATORS):
+        return "capacity"
+    return "other"
+
+
+def deadline_exceeded(started_at, now, deadline_hours):
+    """True once more than deadline_hours of clock time have passed."""
+    return (now - started_at) / 3600 > deadline_hours
+
+
 class TerraformDeployer:
     def __init__(self, terraform_dir="terraform"):
         self.terraform_dir = Path(terraform_dir)
@@ -197,36 +224,11 @@ class TerraformDeployer:
     
     def check_capacity_error(self, errors, stderr):
         """Check if errors indicate capacity issues"""
-        capacity_indicators = [
-            "Out of host capacity",
-            "OutOfHostCapacity", 
-            "insufficient capacity",
-            "no capacity",
-            "CannotAttachVolume"
-        ]
-        
-        # VCN limit errors are NOT capacity errors - they need manual intervention
-        non_capacity_indicators = [
-            "vcn-count",
-            "limit exceeded",
-            "quota exceeded",
-            "LimitExceeded"
-        ]
-        
-        all_error_text = " ".join(errors) + " " + stderr
-        
-        # First check if it's a non-capacity limit error
-        for indicator in non_capacity_indicators:
-            if indicator.lower() in all_error_text.lower():
-                logger.warning("Service limit error detected - this requires manual intervention or cleanup")
-                return False
-        
-        # Then check for capacity errors
-        for indicator in capacity_indicators:
-            if indicator.lower() in all_error_text.lower():
-                return True
-        return False
-    
+        kind = classify_error(errors, stderr)
+        if kind == "limit":
+            logger.warning("Service limit error detected - this requires manual intervention or cleanup")
+        return kind == "capacity"
+
     def deploy_with_retry(self):
         """Main deployment loop with retry logic"""
         self.init_terraform()
@@ -235,8 +237,7 @@ class TerraformDeployer:
         while True:
             self.attempt += 1
 
-            elapsed_hours = (time.monotonic() - self.started_at) / 3600
-            if elapsed_hours > self.retry_deadline_hours:
+            if deadline_exceeded(self.started_at, time.monotonic(), self.retry_deadline_hours):
                 logger.error(f"Retry deadline of {self.retry_deadline_hours}h exceeded after "
                              f"{self.attempt - 1} attempts. Giving up.")
                 return 2

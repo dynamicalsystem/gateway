@@ -30,6 +30,38 @@ def is_free_tier(volume):
     return (volume.system_tags or {}).get("orcl-cloud", {}).get("free-tier-retained") == "true"
 
 
+def classify(instances, boot_volumes, block_volumes, attached_boot, attached_block,
+             allowance_gb=FREE_ALLOWANCE_GB):
+    """Decide what is wrong with a tenancy's compute and storage.
+
+    Pure: takes lists of objects with the attributes the OCI SDK models
+    expose (display_name, id, size_in_gbs, freeform_tags, system_tags) and
+    dicts of volume id to instance id for attachments. Returns
+    (problems, notes, total_gb). problems fail the run; notes are printed.
+    """
+    problems, notes, unmarked = [], [], []
+    for i in instances:
+        if not (i.freeform_tags or {}).get("managed-by"):
+            problems.append(f"instance {i.display_name} has no managed-by tag")
+    total_gb = 0
+    for kind, volumes, attached in (("boot volume", boot_volumes, attached_boot),
+                                    ("block volume", block_volumes, attached_block)):
+        for v in volumes:
+            total_gb += v.size_in_gbs
+            if not attached.get(v.id):
+                problems.append(f"{kind} {v.display_name} ({v.size_in_gbs} GB) is not attached")
+            if not is_free_tier(v):
+                unmarked.append(f"{kind} {v.display_name} ({v.size_in_gbs} GB)")
+    if total_gb > allowance_gb:
+        problems.append(f"total volume storage {total_gb} GB exceeds the {allowance_gb} GB allowance")
+        notes.extend(f"{u} is billed at paid rates, expected while over the allowance" for u in unmarked)
+    else:
+        problems.extend(f"{u} has no free-tier-retained tag while the tenancy is inside the allowance: "
+                        "it is being billed and Oracle's automatic transition has not fired; raise a support request"
+                        for u in unmarked)
+    return problems, notes, total_gb
+
+
 def load_config():
     env = {k: os.environ.get(f"TF_VAR_{k}") for k in ("tenancy_ocid", "user_ocid", "fingerprint", "region")}
     if all(env.values()):
@@ -65,8 +97,7 @@ def main():
     ]
     ads = [a.name for a in identity.list_availability_domains(tenancy).data]
 
-    problems = []
-    unmarked = []
+    instances, boot_volumes, block_volumes = [], [], []
     attached_boot, attached_block = {}, {}
 
     print("=== INSTANCES ===")
@@ -74,10 +105,9 @@ def main():
         for i in all_results(compute.list_instances, c):
             if i.lifecycle_state == "TERMINATED":
                 continue
-            managed = (i.freeform_tags or {}).get("managed-by")
-            print(f"{i.lifecycle_state:11} {i.display_name:30} {i.shape:20} {i.time_created:%Y-%m-%d} managed-by={managed} {i.id}")
-            if not managed:
-                problems.append(f"instance {i.display_name} has no managed-by tag")
+            instances.append(i)
+            print(f"{i.lifecycle_state:11} {i.display_name:30} {i.shape:20} {i.time_created:%Y-%m-%d} "
+                  f"managed-by={(i.freeform_tags or {}).get('managed-by')} {i.id}")
         for ad in ads:
             for ba in all_results(compute.list_boot_volume_attachments, ad, c):
                 if ba.lifecycle_state in ("ATTACHED", "ATTACHING"):
@@ -86,35 +116,24 @@ def main():
             if va.lifecycle_state in ("ATTACHED", "ATTACHING"):
                 attached_block[va.volume_id] = va.instance_id
 
-    total_gb = 0
     print("\n=== BOOT VOLUMES ===")
     for c in compartments:
         for ad in ads:
             for bv in all_results(blockstorage.list_boot_volumes, availability_domain=ad, compartment_id=c):
                 if bv.lifecycle_state == "TERMINATED":
                     continue
-                total_gb += bv.size_in_gbs
-                att = attached_boot.get(bv.id)
-                free = is_free_tier(bv)
-                print(f"{bv.lifecycle_state:10} {bv.size_in_gbs:5}GB vpus={bv.vpus_per_gb:3} {bv.time_created:%Y-%m-%d} {bv.display_name:45} attached={att or 'NO'} free-tier={'yes' if free else 'NO'}")
-                if not att:
-                    problems.append(f"boot volume {bv.display_name} ({bv.size_in_gbs} GB) is not attached")
-                if not free:
-                    unmarked.append(f"boot volume {bv.display_name} ({bv.size_in_gbs} GB)")
+                boot_volumes.append(bv)
+                print(f"{bv.lifecycle_state:10} {bv.size_in_gbs:5}GB vpus={bv.vpus_per_gb:3} {bv.time_created:%Y-%m-%d} "
+                      f"{bv.display_name:45} attached={attached_boot.get(bv.id) or 'NO'} free-tier={'yes' if is_free_tier(bv) else 'NO'}")
 
     print("\n=== BLOCK VOLUMES ===")
     for c in compartments:
         for v in all_results(blockstorage.list_volumes, compartment_id=c):
             if v.lifecycle_state == "TERMINATED":
                 continue
-            total_gb += v.size_in_gbs
-            att = attached_block.get(v.id)
-            free = is_free_tier(v)
-            print(f"{v.lifecycle_state:10} {v.size_in_gbs:5}GB vpus={v.vpus_per_gb:3} {v.time_created:%Y-%m-%d} {v.display_name:45} attached={att or 'NO'} free-tier={'yes' if free else 'NO'}")
-            if not att:
-                problems.append(f"block volume {v.display_name} ({v.size_in_gbs} GB) is not attached")
-            if not free:
-                unmarked.append(f"block volume {v.display_name} ({v.size_in_gbs} GB)")
+            block_volumes.append(v)
+            print(f"{v.lifecycle_state:10} {v.size_in_gbs:5}GB vpus={v.vpus_per_gb:3} {v.time_created:%Y-%m-%d} "
+                  f"{v.display_name:45} attached={attached_block.get(v.id) or 'NO'} free-tier={'yes' if is_free_tier(v) else 'NO'}")
 
     print("\n=== VOLUME BACKUPS ===")
     for c in compartments:
@@ -125,15 +144,10 @@ def main():
             if b.lifecycle_state != "TERMINATED":
                 print(f"block-backup {b.lifecycle_state:10} {b.unique_size_in_gbs}GB {b.time_created:%Y-%m-%d} {b.display_name}")
 
+    problems, notes, total_gb = classify(instances, boot_volumes, block_volumes, attached_boot, attached_block)
     print(f"\nTOTAL live volume storage: {total_gb} GB (Always Free allowance is {FREE_ALLOWANCE_GB} GB)")
-    if total_gb > FREE_ALLOWANCE_GB:
-        problems.append(f"total volume storage {total_gb} GB exceeds the {FREE_ALLOWANCE_GB} GB allowance")
-        for u in unmarked:
-            print(f"  note: {u} is billed at paid rates, expected while over the allowance")
-    else:
-        for u in unmarked:
-            problems.append(f"{u} has no free-tier-retained tag while the tenancy is inside the allowance: "
-                            "it is being billed and Oracle's automatic transition has not fired; raise a support request")
+    for n in notes:
+        print(f"  note: {n}")
 
     if problems:
         print("\nPROBLEMS:")

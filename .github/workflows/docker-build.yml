@@ -17,6 +17,39 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      TF_VAR_user_data_template: ${{ github.workspace }}/setup_tinsnip_box.sh.tpl
+      TF_VAR_ufw_take_over_script: ${{ github.workspace }}/scripts/ufw_take_over.sh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.5
+          terraform_wrapper: false
+      - name: Terraform format
+        run: terraform fmt -check -recursive -diff terraform/
+      - name: Terraform validate
+        working-directory: terraform
+        run: |
+          terraform init -input=false -backend-config=path=/tmp/ci.tfstate
+          terraform validate
+      - name: Render cloud-init templates and syntax-check them
+        working-directory: terraform
+        run: |
+          for tpl in setup_tinsnip_box.sh.tpl setup_secure_tunnel.sh.tpl; do
+            echo "templatefile(\"../$tpl\", {domain=\"example.com\", email=\"a@example.com\", hostname=\"ci\", public=false, ufw_take_over=file(\"../scripts/ufw_take_over.sh\")})" \
+              | terraform console | python3 -c 'import sys,ast; print(ast.literal_eval(sys.stdin.read().strip()))' > /tmp/$tpl.sh
+            bash -n /tmp/$tpl.sh && echo "$tpl renders and parses"
+          done
+      - uses: astral-sh/setup-uv@v5
+      - name: Python compile and unit tests
+        run: |
+          uv sync --frozen
+          uv run python -m py_compile terraform_deploy.py main.py scripts/*.py
+          uv run pytest -q
+
   build:
     runs-on: ubuntu-latest
     permissions:
