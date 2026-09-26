@@ -29,11 +29,9 @@ Cross-loop triggers and observations that outlive their owning loops.
   README section or delete it.
 - 2026-09-13 gateway: the hub's wg0 PostUp and PostDown leave duplicate
   FORWARD accepts and MASQUERADE rules behind across restarts (four accepts,
-  three masquerades, two rejects seen). Harmless but untidy; clean up and
-  guard the template's rules against duplication when next touching it.
+  three masquerades, two rejects seen). Absorbed into host-firewall-ufw-authority.
 - 2026-09-13 gateway: the hub rejects ICMP from peers, so pinging 10.100.0.1
   is not a valid tunnel test; use TCP to port 22.
 - 2026-09-13 gateway: the gateway and tinsnip cloud-init templates both
   leave OCI's stock rules.v4 in place, which accepts port 22 ahead of ufw.
-  Either template should remove that rule so ufw is the single source of
-  truth on the host.
+  Promoted to loop host-firewall-ufw-authority on 2026-09-26.
