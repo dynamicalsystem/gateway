@@ -241,8 +241,8 @@ resource "oci_core_instance" "gateway_instance" {
   metadata = {
     ssh_authorized_keys = var.ssh_public_key
     user_data = base64encode(templatefile(var.user_data_template, {
-      domain   = var.domain
-      email    = var.email
+      domain        = var.domain
+      email         = var.email
       hostname      = var.service # boxes are named by service alone, like the live gateway
       public        = var.public
       ufw_take_over = file(var.ufw_take_over_script)
