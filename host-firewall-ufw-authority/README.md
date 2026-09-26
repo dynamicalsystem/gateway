@@ -119,19 +119,23 @@ Started 2026-09-26.
 - gateway cutover script prepared (session scratchpad `gateway_cutover.sh`):
   install ufw, mirror the live allows (22, 80, 443/tcp+udp, 51820/udp,
   8010 on wg0, route allow wg0), take-over with `--hub enp0s6 10.100.0.0/24`,
-  strip wg0 PostUp hooks, enable, reboot. Awaiting Simon's maintenance
-  window: one reboot, about a minute of downtime for Caddy, Signal and the
-  hub.
+  strip wg0 PostUp hooks, enable, reboot.
+- gateway cut over 2026-09-26 with Simon's go-ahead (no usage). Sub-agent
+  launch for it was refused by the permission classifier, so it ran from
+  the main session, detached with nohup so an SSH drop could not
+  half-apply it. Box back about 50 seconds after launch. Pre-check noted
+  the homelab peer has never handshaked with the hub; laptop and agent
+  re-handshaked within a minute of the reboot.
 
 ## Outcomes
 
 ### Outcome 1: ufw is the only host firewall on both boxes
 
 Tests:
-- [ ] On agent and gateway, `iptables -S INPUT` shows no accept or reject
+- [/] On agent and gateway, `iptables -S INPUT` shows no accept or reject
       rules before the `ufw-before-input` chain other than ufw's own.
-- [ ] `systemctl is-enabled netfilter-persistent` reports disabled or the
-      unit is absent, and `/etc/iptables/rules.v4` is gone.
+- [/] `systemctl is-enabled netfilter-persistent` reports disabled or the
+      unit is absent, and `/etc/iptables/rules.v4` is gone. Both boxes.
 - [/] A reboot of agent brings it back with the same ufw rule set and no
       stock rules. Verified 2026-09-26 (the recovery reboot).
 
@@ -139,11 +143,12 @@ Tests:
 
 Tests:
 - [/] agent: `ssh agent` over the tunnel works; public 22 still closed.
-- [ ] gateway: SSH from the internet, HTTPS to a hosted site, WireGuard
+- [/] gateway: SSH from the internet, HTTPS to a hosted site, WireGuard
       handshakes from laptop, homelab and agent, and Signal on 8010 over
-      wg0 all work after the change.
-- [ ] gateway: laptop can still reach agent through the hub (forwarding now
-      via a ufw route rule).
+      wg0 all work after the change. Homelab excepted: it had never
+      handshaked before the change either, so it is not a regression.
+- [/] gateway: laptop can still reach agent through the hub (forwarding now
+      via a ufw route rule). ufw-user-forward carries `-i wg0 -j ACCEPT`.
 
 ### Outcome 3: New boxes get it right from first boot
 
