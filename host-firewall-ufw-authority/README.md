@@ -2,7 +2,7 @@
 loop: host-firewall-ufw-authority
 product: gateway
 owner: dynamicalsystem
-status: Act
+status: Closed
 parent: null
 blocked-by: []
 worktrees: []
@@ -10,11 +10,11 @@ prs: [https://github.com/dynamicalsystem/gateway/pull/5]
 triggers: []
 ---
 
-# Host firewall: make ufw the authority
+# [ARCHIVED] Host firewall: make ufw the authority
 
 ## Status
 
-Act
+Closed
 
 **Owner:** dynamicalsystem
 

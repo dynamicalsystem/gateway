@@ -2,7 +2,7 @@
 loop: agent-private-access
 product: gateway
 owner: dynamicalsystem
-status: Act
+status: Closed
 parent: null
 blocked-by: []
 worktrees: []
@@ -10,11 +10,11 @@ prs: [https://github.com/dynamicalsystem/gateway/pull/3]
 triggers: []
 ---
 
-# Agent private access
+# [ARCHIVED] Agent private access
 
 ## Status
 
-Act
+Closed
 
 **Owner:** dynamicalsystem
 
