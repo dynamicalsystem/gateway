@@ -115,8 +115,10 @@ Tests:
 Tests:
 - [/] `terraform plan` with `public=false ssh_public=false` shows a security
       list with 51820/udp ingress only. Applied to agent.
-- [ ] The tinsnip template installs WireGuard and does not open 80/443 when
-      `public` is false. Not exercised: agent was built before PR #3.
+- [/] The tinsnip template installs WireGuard and does not open 80/443 when
+      `public` is false. Exercised 2026-09-26 by the throwaway `probe` box in
+      host-firewall-ufw-authority: wireguard-tools present, ufw shows only
+      OpenSSH and 51820/udp.
 
 ### Outcome 3: Outbound still works
 

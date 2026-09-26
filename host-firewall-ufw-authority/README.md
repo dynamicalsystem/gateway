@@ -126,6 +126,8 @@ Started 2026-09-26.
   half-apply it. Box back about 50 seconds after launch. Pre-check noted
   the homelab peer has never handshaked with the hub; laptop and agent
   re-handshaked within a minute of the reboot.
+- Throwaway box `probe` deployed with the merged templates, verified, and
+  destroyed via Terraform the same hour (Outcome 3).
 
 ## Outcomes
 
@@ -153,6 +155,10 @@ Tests:
 ### Outcome 3: New boxes get it right from first boot
 
 Tests:
-- [ ] A throwaway private box built from the updated tinsnip template
+- [/] A throwaway private box built from the updated tinsnip template
       passes Outcome 1's first two tests without manual steps. This also
       covers the untested cloud-init WireGuard path from agent-private-access.
+      Box `probe` (service=probe, environment=test, public=false) built
+      2026-09-26: self-rebooted after first boot, ufw alone, WireGuard
+      installed, only SSH and 51820 open, InstanceServices carried, podman
+      and linger present, fresh volume tagged free tier. Destroyed afterwards.

@@ -5,11 +5,9 @@ owner: dynamicalsystem
 status: Act
 parent: null
 blocked-by: []
-worktrees: [deployer-cleanup-and-state]
+worktrees: []
 prs: [https://github.com/dynamicalsystem/gateway/pull/1]
-triggers:
-  - when: Oracle answers billing support request 16281429
-    then: "Record whether new volumes in this tenancy rate as Always Free"
+triggers: []
 ---
 
 # Deployer cleanup and state
@@ -220,8 +218,9 @@ Tests:
 Tests:
 - [/] `scripts/oci_inventory.py` runs against the tenancy with the `.oci`
       config and prints instances, volumes, attachments, and total GB.
-- [ ] After a successful deploy, the deployer runs the inventory and exits
-      non-zero if any volume is unattached.
+- [/] After a successful deploy, the deployer runs the inventory and exits
+      non-zero if any volume is unattached. Ran on the agent (2026-09-12) and
+      probe (2026-09-26) deploys; both passed and the exit path is wired.
 
 ### Outcome 4: The Terraform config is honest about the free tier
 
@@ -234,8 +233,10 @@ Tests:
 ### Outcome 5: Resources are identifiable by name and tag
 
 Tests:
-- [ ] A fresh deploy with `service=gateway environment=test` produces an
+- [/] A fresh deploy with `service=gateway environment=test` produces an
       instance, VCN, and subnet named per the convention, each tagged
-      `service`, `environment`, `managed-by=terraform`.
+      `service`, `environment`, `managed-by=terraform`. Done with
+      `service=probe environment=test` on 2026-09-26: probe-test, probe-test-vcn,
+      probe-test-subnet, all tagged; then destroyed.
 - [/] The inventory check lists the live instance as untagged until it is
       tagged in place, and clean afterwards. Tagged 2026-09-12; passes.
