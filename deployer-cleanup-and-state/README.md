@@ -198,8 +198,10 @@ on branch `deployer-cleanup-and-state`.
 ### Outcome 1: A container restart does not create a second instance
 
 Tests:
-- [ ] With a deployed instance, restart the gateway container; `terraform plan`
+- [/] With a deployed instance, restart the gateway container; `terraform plan`
       reports no changes and the tenancy still has exactly one instance.
+      Exercised as the repeat-run check in `scripts/probe.sh` from agent on
+      2026-09-26: a second run against the same state plans no changes.
 - [/] The state file exists under the mounted `/state` path on the host after
       the first successful apply. Verified locally: init honoured the backend
       path and wrote a 36 KB state there after import.
@@ -207,9 +209,12 @@ Tests:
 ### Outcome 2: A failed apply leaves no unattached volume
 
 Tests:
-- [ ] Simulate a capacity failure (for example, request more OCPUs than the
+- [/] Simulate a capacity failure (for example, request more OCPUs than the
       A1 limit allows) and confirm the inventory shows no orphaned boot or
-      block volume after the retry loop gives up or is stopped.
+      block volume after the retry loop gives up or is stopped. Done
+      2026-09-26 with `ocpus=1000`: exit 1, no orphan, partial network in
+      state and destroyed. True out-of-host-capacity cannot be forced; the
+      retry path itself is covered by unit tests on `classify_error`.
 - [/] `cleanup_failed_deployment` targets a resource name that exists in
       `main.tf`. Verified by grep; `terraform validate` passes.
 

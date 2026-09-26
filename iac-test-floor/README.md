@@ -5,8 +5,8 @@ owner: dynamicalsystem
 status: Act
 parent: null
 blocked-by: []
-worktrees: [iac-test-floor]
-prs: []
+worktrees: []
+prs: [https://github.com/dynamicalsystem/gateway/pull/6, https://github.com/dynamicalsystem/gateway/pull/7, https://github.com/dynamicalsystem/gateway/pull/8, https://github.com/dynamicalsystem/gateway/pull/9, https://github.com/dynamicalsystem/gateway/pull/10]
 triggers: []
 ---
 
@@ -28,8 +28,9 @@ testing; the answer was yes, proportionately. Simon also offered the unused
 
 ## Observations
 
-- `.github/workflows` builds the image on push to main only; nothing runs on
-  pull requests, so "wait for checks then merge" was a no-op in this repo.
+- `.github/workflows` builds the image on push and on pull requests, but the
+  build is the only check; nothing validates the Terraform, the templates,
+  or the Python.
 - Bugs found this month and what would have caught them:
   - cleanup targeting a resource name absent from the config: a unit test
     or a grep in CI.
@@ -87,14 +88,44 @@ GitHub Actions with tenancy credentials.
 
 Started 2026-09-26.
 
+- PR #6: `check` job (fmt, validate, render both templates and `bash -n`
+  them, py_compile, pytest); `classify()`, `classify_error()`,
+  `deadline_exceeded()` pure and tested (11 tests); `scripts/tf_env.sh`,
+  `scripts/plan_check.sh`, `scripts/probe.sh`; `ocpus` and `memory_in_gbs`
+  variables. Two CI failures on the way, both real: unformatted Terraform,
+  and `terraform console` printing multi-line strings as a heredoc.
+- `plan_check.sh` immediately found gateway's three never-applied in-place
+  changes (renames and tags on route table, security list, internet
+  gateway). Applied; both boxes now plan clean.
+- Found a zsh bug in `tf_env.sh` (`BASH_SOURCE` unset when sourced), which
+  made `file(var.ufw_take_over_script)` fail at apply. Fixed with
+  `git rev-parse --show-toplevel`.
+- agent set up as deploy host: Terraform 1.9.5, uv, repo clone, OCI config
+  and API key, SSH key pair, both live state files. Inventory and
+  plan_check run there clean.
+- First probe run from agent aborted in verify (set -e on a failed SSH,
+  because agent lacked the private key) and left the box running. PRs #7,
+  #8, #9, #10 followed: destroy from an EXIT trap, count boots instead of
+  uptime, never abort on a failed check, drop a stray `fi` that CI had not
+  caught (CI now runs `bash -n` on every script), drop a duplicated destroy
+  block, and count ufw's IPv6 lines. The second run destroyed the stray box
+  and passed every real check.
+- Failure path (Decision 6): deployer run from agent with `ocpus=1000`
+  exited 1 with "non-capacity error"; no instance or volume created; the
+  VCN, subnet, gateway, route table and security list it had created were
+  in state and destroyed with one command. The deployer deliberately does
+  not destroy partial resources on a configuration error; persisted state
+  is what makes them recoverable.
+
 ## Outcomes
 
 ### Outcome 1: A pull request cannot merge with broken IaC
 
 Tests:
-- [ ] A PR that breaks `main.tf` formatting or validity, or a template
-      render, shows a failed `check` on the PR before merge.
-- [ ] pytest runs in CI and covers the inventory classification and the
+- [/] A PR that breaks `main.tf` formatting or validity, or a template
+      render, shows a failed `check` on the PR before merge. Demonstrated
+      twice on PR #6 itself.
+- [/] pytest runs in CI and covers the inventory classification and the
       deployer's deadline and error classification.
 
 ### Outcome 2: Real-infrastructure checks are one command each
@@ -102,13 +133,14 @@ Tests:
 Tests:
 - [ ] `scripts/probe.sh` run from agent deploys, verifies, and destroys a
       probe box, and the repeat-run plan shows no changes.
-- [ ] `scripts/plan_check.sh` run from agent reports no changes for gateway
+- [/] `scripts/plan_check.sh` run from agent reports no changes for gateway
       and agent.
-- [ ] A forced deployer failure exits non-zero and the inventory shows no
-      orphan afterwards.
+- [/] A forced deployer failure exits non-zero and the inventory shows no
+      orphan afterwards. Partial network resources were in state and
+      destroyed.
 
 ### Outcome 3: The deployer has a home
 
 Tests:
-- [ ] agent has Terraform, uv, the repo, credentials and both live state
+- [/] agent has Terraform, uv, the repo, credentials and both live state
       files; `terraform plan` for gateway and agent from agent is clean.
