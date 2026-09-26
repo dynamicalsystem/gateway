@@ -6,7 +6,7 @@ status: Act
 parent: null
 blocked-by: []
 worktrees: []
-prs: []
+prs: [https://github.com/dynamicalsystem/gateway/pull/5]
 triggers: []
 ---
 
@@ -115,7 +115,13 @@ Started 2026-09-26.
   the stock loader; never touches live tables), inlined into both
   cloud-init templates via a new Terraform variable; tinsnip template
   reboots at the end of first boot; gateway template drops the PostUp
-  iptables lines.
+  iptables lines. Merged as PR #5, main build green.
+- gateway cutover script prepared (session scratchpad `gateway_cutover.sh`):
+  install ufw, mirror the live allows (22, 80, 443/tcp+udp, 51820/udp,
+  8010 on wg0, route allow wg0), take-over with `--hub enp0s6 10.100.0.0/24`,
+  strip wg0 PostUp hooks, enable, reboot. Awaiting Simon's maintenance
+  window: one reboot, about a minute of downtime for Caddy, Signal and the
+  hub.
 
 ## Outcomes
 
