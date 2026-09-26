@@ -92,6 +92,31 @@ lists.
 
 Started 2026-09-26.
 
+- Observed live: on agent the stock ruleset's final REJECT sits before
+  ufw's chains, so ufw never saw a packet; WireGuard worked only because
+  agent initiates. On gateway ufw is not installed at all; its saved
+  ruleset carries empty ufw chains from an earlier life, the stock rules
+  are loaded twice, and the four MASQUERADE rules name `ens3`, an interface
+  the box does not have (WAN is `enp0s6`). Oracle's `InstanceServices`
+  chain restricts outbound to link-local metadata and iSCSI addresses; it
+  is hardening and is kept.
+- agent converted 2026-09-26. The in-place sequence (ufw disable, flush
+  stock rules, ufw enable) locked the box out: session dropped, tunnel
+  keepalives stopped. A soft reset via the API recovered it in under a
+  minute, and the box came up in the target state, so the config was
+  right and the live transition was the problem. Lesson for gateway:
+  prepare everything, then cut over with a reboot.
+- agent verified: no foreign rules ahead of ufw, netfilter-persistent
+  disabled and its files removed, InstanceServices chain in ufw's output
+  path, outbound and metadata reachable, public 22 closed, tunnel SSH works,
+  state survived reboot.
+- Branch `host-firewall-ufw-authority`: `scripts/ufw_take_over.sh`
+  (prepares before.rules, optional hub NAT and forwarding via ufw, disables
+  the stock loader; never touches live tables), inlined into both
+  cloud-init templates via a new Terraform variable; tinsnip template
+  reboots at the end of first boot; gateway template drops the PostUp
+  iptables lines.
+
 ## Outcomes
 
 ### Outcome 1: ufw is the only host firewall on both boxes
@@ -101,13 +126,13 @@ Tests:
       rules before the `ufw-before-input` chain other than ufw's own.
 - [ ] `systemctl is-enabled netfilter-persistent` reports disabled or the
       unit is absent, and `/etc/iptables/rules.v4` is gone.
-- [ ] A reboot of agent brings it back with the same ufw rule set and no
-      stock rules.
+- [/] A reboot of agent brings it back with the same ufw rule set and no
+      stock rules. Verified 2026-09-26 (the recovery reboot).
 
 ### Outcome 2: Nothing that worked before stops working
 
 Tests:
-- [ ] agent: `ssh agent` over the tunnel works; public 22 still closed.
+- [/] agent: `ssh agent` over the tunnel works; public 22 still closed.
 - [ ] gateway: SSH from the internet, HTTPS to a hosted site, WireGuard
       handshakes from laptop, homelab and agent, and Signal on 8010 over
       wg0 all work after the change.
