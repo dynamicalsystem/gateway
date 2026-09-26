@@ -68,6 +68,12 @@ variable "ubuntu_version" {
   default     = "22.04"
 }
 
+variable "ufw_take_over_script" {
+  description = "Path to scripts/ufw_take_over.sh, inlined into cloud-init so ufw owns the host firewall"
+  type        = string
+  default     = "/app/scripts/ufw_take_over.sh"
+}
+
 variable "user_data_template" {
   description = "Path to the cloud-init template rendered into user_data"
   type        = string
@@ -237,8 +243,9 @@ resource "oci_core_instance" "gateway_instance" {
     user_data = base64encode(templatefile(var.user_data_template, {
       domain   = var.domain
       email    = var.email
-      hostname = var.service # boxes are named by service alone, like the live gateway
-      public   = var.public
+      hostname      = var.service # boxes are named by service alone, like the live gateway
+      public        = var.public
+      ufw_take_over = file(var.ufw_take_over_script)
     }))
   }
 
