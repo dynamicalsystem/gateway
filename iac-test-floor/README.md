@@ -2,7 +2,7 @@
 loop: iac-test-floor
 product: gateway
 owner: dynamicalsystem
-status: Act
+status: Closed
 parent: null
 blocked-by: []
 worktrees: []
@@ -10,11 +10,11 @@ prs: [https://github.com/dynamicalsystem/gateway/pull/6, https://github.com/dyna
 triggers: []
 ---
 
-# IaC test floor
+# [ARCHIVED] IaC test floor
 
 ## Status
 
-Act
+Closed
 
 **Owner:** dynamicalsystem
 
@@ -131,8 +131,9 @@ Tests:
 ### Outcome 2: Real-infrastructure checks are one command each
 
 Tests:
-- [ ] `scripts/probe.sh` run from agent deploys, verifies, and destroys a
-      probe box, and the repeat-run plan shows no changes.
+- [/] `scripts/probe.sh` run from agent deploys, verifies, and destroys a
+      probe box, and the repeat-run plan shows no changes. Clean run
+      2026-09-26: 13 of 13 checks, 6 resources destroyed, baseline restored.
 - [/] `scripts/plan_check.sh` run from agent reports no changes for gateway
       and agent.
 - [/] A forced deployer failure exits non-zero and the inventory shows no

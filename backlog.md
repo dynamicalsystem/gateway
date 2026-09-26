@@ -35,3 +35,7 @@ Cross-loop triggers and observations that outlive their owning loops.
 - 2026-09-13 gateway: the gateway and tinsnip cloud-init templates both
   leave OCI's stock rules.v4 in place, which accepts port 22 ahead of ufw.
   Promoted to loop host-firewall-ufw-authority on 2026-09-26.
+- 2026-09-26 gateway: agent runs the deployer and the hand-run checks with
+  the tenancy admin API key copied from Simon's Mac. Create a dedicated OCI
+  user and group for agent with a policy limited to compute, network and
+  block storage in the tenancy, plus read on usage, and rotate the key.

@@ -2,7 +2,7 @@
 loop: deployer-cleanup-and-state
 product: gateway
 owner: dynamicalsystem
-status: Act
+status: Closed
 parent: null
 blocked-by: []
 worktrees: []
@@ -10,11 +10,11 @@ prs: [https://github.com/dynamicalsystem/gateway/pull/1]
 triggers: []
 ---
 
-# Deployer cleanup and state
+# [ARCHIVED] Deployer cleanup and state
 
 ## Status
 
-Act
+Closed
 
 **Owner:** dynamicalsystem
 
