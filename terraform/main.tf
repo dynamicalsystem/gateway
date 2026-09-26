@@ -62,6 +62,18 @@ variable "ssh_public" {
   default     = true
 }
 
+variable "ocpus" {
+  description = "A1 OCPUs. Two 1-OCPU boxes fill the free monthly allowance."
+  type        = number
+  default     = 1
+}
+
+variable "memory_in_gbs" {
+  description = "A1 memory in GB. 6 GB per OCPU keeps within the free allowance."
+  type        = number
+  default     = 6
+}
+
 variable "ubuntu_version" {
   description = "Canonical Ubuntu release for new instances. Ignored for existing ones (see lifecycle)."
   type        = string
@@ -218,8 +230,8 @@ resource "oci_core_instance" "gateway_instance" {
   freeform_tags       = local.tags
 
   shape_config {
-    ocpus         = 1
-    memory_in_gbs = 6
+    ocpus         = var.ocpus
+    memory_in_gbs = var.memory_in_gbs
   }
 
   # 50 GB is the smallest boot volume OCI will create. The Always Free
