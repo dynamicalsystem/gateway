@@ -83,11 +83,4 @@ if [ "$destroyed" = 1 ]; then
   check "inventory back to baseline ($baseline running)" "[ \"$after\" = \"$baseline\" ] && grep -q '^\[/\]' /tmp/probe-inventory.txt"
 fi
 
-echo "=== destroy ==="
-( cd terraform && terraform destroy -auto-approve -input=false -no-color -lock=false ) > /tmp/probe-destroy.txt 2>&1 || { echo "[x] destroy failed"; tail -10 /tmp/probe-destroy.txt; exit 1; }
-grep -E '^Destroy complete' /tmp/probe-destroy.txt || tail -3 /tmp/probe-destroy.txt
-rm -rf "$XDG_STATE_HOME/$TIN_NAMESPACE/probe"
-sleep 20
-after=$(uv run --no-cache python scripts/oci_inventory.py | tee /tmp/probe-inventory.txt | grep -c '^RUNNING' || true)
-check "inventory back to baseline ($baseline running)" "[ \"$after\" = \"$baseline\" ] && grep -q '^\[/\]' /tmp/probe-inventory.txt"
 exit $fail
