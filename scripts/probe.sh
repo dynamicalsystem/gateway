@@ -82,7 +82,6 @@ if [ "$destroyed" = 1 ]; then
   after=$(uv run --no-cache python scripts/oci_inventory.py | tee /tmp/probe-inventory.txt | grep -c '^RUNNING' || true)
   check "inventory back to baseline ($baseline running)" "[ \"$after\" = \"$baseline\" ] && grep -q '^\[/\]' /tmp/probe-inventory.txt"
 fi
-exit $fail; fi
 
 echo "=== destroy ==="
 ( cd terraform && terraform destroy -auto-approve -input=false -no-color -lock=false ) > /tmp/probe-destroy.txt 2>&1 || { echo "[x] destroy failed"; tail -10 /tmp/probe-destroy.txt; exit 1; }

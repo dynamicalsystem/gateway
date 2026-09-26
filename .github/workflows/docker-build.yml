@@ -28,6 +28,8 @@ jobs:
         with:
           terraform_version: 1.9.5
           terraform_wrapper: false
+      - name: Shell syntax
+        run: bash -n scripts/*.sh setup_tinsnip_box.sh.tpl 2>/dev/null || for f in scripts/*.sh; do bash -n "$f"; done
       - name: Terraform format
         run: terraform fmt -check -recursive -diff terraform/
       - name: Terraform validate
