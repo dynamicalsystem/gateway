@@ -47,10 +47,7 @@ ListenPort = 51820
 PrivateKey = WILL_BE_REPLACED
 
 # Enable packet forwarding between clients
-PostUp = iptables -A FORWARD -i wg0 -j ACCEPT
-PostUp = iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
-PostDown = iptables -D FORWARD -i wg0 -j ACCEPT
-PostDown = iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE
+# Forwarding between peers and NAT are ufw rules (see ufw_take_over.sh --hub)
 
 # Homelab peer
 [Peer]
@@ -207,6 +204,15 @@ EOF
 chown -R 1001:1001 /opt/caddy
 chmod 600 /opt/caddy/Caddyfile
 
+# Retire Oracle's stock iptables rules so ufw owns the host firewall, and
+# express hub forwarding and NAT as ufw rules instead of wg0 PostUp hooks.
+cat > /usr/local/sbin/ufw_take_over.sh <<'UFWTAKEOVER'
+${ufw_take_over}
+UFWTAKEOVER
+chmod +x /usr/local/sbin/ufw_take_over.sh
+WAN_IF=$(ip route show default | awk '{print $5; exit}')
+/usr/local/sbin/ufw_take_over.sh --hub "$WAN_IF" 10.100.0.0/24
+
 # Configure UFW with strict rules
 ufw --force reset
 ufw default deny incoming
@@ -217,6 +223,7 @@ ufw allow 22/tcp comment 'SSH'
 ufw allow 80/tcp comment 'HTTP'
 ufw allow 443/tcp comment 'HTTPS'
 ufw allow 51820/udp comment 'WireGuard'
+ufw route allow in on wg0 comment 'wireguard hub forwarding'
 
 # Rate limiting on SSH
 ufw limit ssh/tcp
@@ -382,3 +389,6 @@ SECURITY NOTES:
 EOF
 
 echo "Setup complete! Check /root/tunnel-setup-info.txt for connection details"
+
+# ufw was enabled on top of the stock rules; a reboot brings it up alone.
+reboot

@@ -23,9 +23,15 @@ apt-get install -y --no-install-recommends \
     ufw \
     wireguard
 
-# OCI Ubuntu images ship iptables rules that block everything but SSH;
-# ufw manages them from here on. Private boxes expose only WireGuard, plus
-# SSH until the tunnel is proven and the security list closes 22.
+# OCI Ubuntu images ship iptables rules that sit ahead of ufw's chains and
+# end in a REJECT, so ufw would never see a packet. Retire them and let ufw
+# own the host firewall. Private boxes expose only WireGuard, plus SSH
+# until the tunnel is proven and the security list closes 22.
+cat > /usr/local/sbin/ufw_take_over.sh <<'UFWTAKEOVER'
+${ufw_take_over}
+UFWTAKEOVER
+chmod +x /usr/local/sbin/ufw_take_over.sh
+/usr/local/sbin/ufw_take_over.sh
 ufw allow OpenSSH
 ufw allow 51820/udp
 %{ if public ~}
@@ -47,3 +53,5 @@ sysctl --system
 hostnamectl set-hostname "${hostname}"
 
 echo "tinsnip box first boot complete" > /var/log/tinsnip-first-boot.done
+# ufw was enabled on top of the stock rules; a reboot brings it up alone.
+reboot
