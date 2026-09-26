@@ -2,7 +2,7 @@
 loop: host-firewall-ufw-authority
 product: gateway
 owner: dynamicalsystem
-status: Decide
+status: Act
 parent: null
 blocked-by: []
 worktrees: []
@@ -14,7 +14,7 @@ triggers: []
 
 ## Status
 
-Decide
+Act
 
 **Owner:** dynamicalsystem
 
@@ -72,7 +72,7 @@ before touching anything.
 
 ## Decision
 
-Proposed, pending Simon's agreement:
+Agreed with Simon 2026-09-26.
 
 1. Both cloud-init templates disable netfilter-persistent and delete
    `/etc/iptables/rules.v4` and `rules.v6` before enabling ufw, so a fresh
@@ -90,7 +90,7 @@ lists.
 
 ## Action
 
-Not started.
+Started 2026-09-26.
 
 ## Outcomes
 
